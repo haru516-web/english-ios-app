@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 import { PetWidget } from './src/PetWidget';
+import { RadialNavigationMenu } from './src/RadialNavigationMenu';
 
 import {
   Character,
@@ -35,7 +36,6 @@ import {
 } from './src/design';
 import {
   Avatar,
-  BottomTabs,
   ChatRow,
   GlassPanel,
   IconButton,
@@ -481,6 +481,7 @@ function ChatDetailScreen({
 
 export default function AppMain() {
   const [activeTab, setActiveTab] = useState<TabKey>('chats');
+  const [radialMenuOpen, setRadialMenuOpen] = useState(false);
   const [activeCharacterId, setActiveCharacterId] = useState<CharacterId | null>(null);
   const [friends, setFriends] = useState<CharacterId[]>(initialFriends);
   const [search, setSearch] = useState('');
@@ -518,6 +519,7 @@ export default function AppMain() {
   const canSend = Boolean(selectedReply && isAcceptableReply(draft, selectedReply.english));
 
   const openChat = (id: CharacterId) => {
+    setRadialMenuOpen(false);
     setActiveCharacterId(id);
     setActiveTab('chats');
     setSearch('');
@@ -572,7 +574,7 @@ export default function AppMain() {
   const showToast = (message: string) => setToast(message);
 
   return (
-    <ScreenBackground petAvoidBottom={activeCharacter ? 260 : 126}>
+    <ScreenBackground petAvoidBottom={activeCharacter || radialMenuOpen ? 260 : 126}>
       {activeCharacter ? (
         <ChatDetailScreen
           character={activeCharacter}
@@ -592,10 +594,10 @@ export default function AppMain() {
           {activeTab === 'chats' ? <ChatsScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} openPeople={openPeople} /> : null}
           {activeTab === 'people' ? <PeopleScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} meet={meet} /> : null}
           {activeTab === 'me' ? <MeScreen notificationsEnabled={notificationsEnabled} toggleNotifications={() => setNotificationsEnabled((value) => !value)} showToast={showToast} /> : null}
-          <BottomTabs activeKey={activeTab} onChange={(key) => { setActiveTab(key as TabKey); setSearch(''); }} style={styles.bottomTabs} tabs={[
+          <RadialNavigationMenu activeKey={activeTab} onOpenChange={setRadialMenuOpen} onChange={(key) => { setActiveTab(key as TabKey); setSearch(''); }} items={[
             { key: 'chats', label: 'Chats', icon: <AppIcon name="chatbubble-ellipses-outline" size={22} color={activeTab === 'chats' ? colors.textPrimary : colors.textSecondary} /> },
-            { key: 'people', label: 'People', icon: <AppIcon name="people-outline" size={22} color={activeTab === 'people' ? colors.textPrimary : colors.textSecondary} /> },
-            { key: 'me', label: 'Me', icon: <AppIcon name="person-outline" size={22} color={activeTab === 'me' ? colors.textPrimary : colors.textSecondary} /> },
+            { key: 'people', label: 'Friends', icon: <AppIcon name="people-outline" size={22} color={activeTab === 'people' ? colors.textPrimary : colors.textSecondary} /> },
+            { key: 'me', label: 'Profile', icon: <AppIcon name="person-outline" size={22} color={activeTab === 'me' ? colors.textPrimary : colors.textSecondary} /> },
           ]} />
         </View>
       )}
@@ -689,7 +691,6 @@ const styles = StyleSheet.create({
   suggestionText: { color: colors.textPrimary, fontSize: 14, lineHeight: 19 },
   composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 3 },
   composerInput: { flex: 1, minHeight: 45, maxHeight: 92, borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.13)', backgroundColor: 'rgba(255,255,255,0.07)', color: colors.textPrimary, fontSize: 15, lineHeight: 20, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10 },
-  bottomTabs: { position: 'absolute', left: 15, right: 15, bottom: Platform.OS === 'ios' ? 8 : 12, zIndex: 10 },
   toast: { position: 'absolute', left: 28, right: 28, bottom: Platform.OS === 'ios' ? 91 : 95, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 38, paddingHorizontal: 15, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(157,240,200,0.26)', backgroundColor: 'rgba(14,29,27,0.94)' },
   toastText: { color: '#DFFFEF', fontSize: 13, fontWeight: '600', marginLeft: 7 },
   pressed: { opacity: 0.72 },

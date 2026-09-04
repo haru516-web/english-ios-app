@@ -3,7 +3,6 @@ import {
   GestureResponderEvent,
   Platform,
   Pressable,
-  ScrollView,
   StyleProp,
   StyleSheet,
   Text,
@@ -208,23 +207,6 @@ export function ProfileRow({ title, subtitle, value, icon, onPress, destructive,
   </Pressable>;
 }
 
-export type BottomTab = { key: string; label: string; icon?: ReactNode; accessibilityLabel?: string };
-export type BottomTabsProps = { tabs?: BottomTab[]; activeKey: string; onChange: (key: string) => void; style?: StyleProp<ViewStyle> };
-
-export function BottomTabs({ tabs = [{ key: 'chats', label: 'Chats' }, { key: 'people', label: 'People' }, { key: 'me', label: 'Me' }], activeKey, onChange, style }: BottomTabsProps) {
-  return <GlassPanel style={[styles.bottomTabs, style]} intensity={42}>
-    <ScrollView horizontal contentContainerStyle={styles.tabsContent} showsHorizontalScrollIndicator={false} accessibilityRole="tablist">
-      {tabs.map((tab) => {
-        const active = tab.key === activeKey;
-        return <Pressable key={tab.key} onPress={() => onChange(tab.key)} accessibilityRole="tab" accessibilityLabel={tab.accessibilityLabel || tab.label} accessibilityState={{ selected: active }} style={({ pressed }) => [styles.tab, active && styles.activeTab, pressed && styles.pressed]}>
-          <View style={styles.tabIcon}>{tab.icon || <Text style={[styles.tabGlyph, active && styles.activeTabGlyph]}>○</Text>}</View>
-          <Text style={[styles.tabLabel, active && styles.activeTabLabel]}>{tab.label}</Text>
-        </Pressable>;
-      })}
-    </ScrollView>
-  </GlassPanel>;
-}
-
 const styles = StyleSheet.create({
   glassPanel: { backgroundColor: 'rgba(20,24,34,0.78)', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, overflow: 'hidden' },
   avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
@@ -269,15 +251,6 @@ const styles = StyleSheet.create({
   profileValue: { color: '#9CA4B2', fontSize: 14 },
   destructive: { color: '#FF8088' },
   chevron: { color: '#7E8797', fontSize: 25, marginLeft: 8 },
-  bottomTabs: { borderRadius: 26, paddingVertical: 5 },
-  tabsContent: { flexGrow: 1, flexDirection: 'row', justifyContent: 'space-around' },
-  tab: { minWidth: 76, minHeight: 58, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: 18 },
-  activeTab: { backgroundColor: 'rgba(121,115,232,0.17)' },
-  tabIcon: { height: 25, justifyContent: 'center' },
-  tabGlyph: { color: '#A5ADBB', fontSize: 24 },
-  activeTabGlyph: { color: '#B7B4FF' },
-  tabLabel: { color: '#929AAA', fontSize: 11, marginTop: 2 },
-  activeTabLabel: { color: '#F5F7FB', fontWeight: '700' },
   pressed: { opacity: 0.72 },
   disabled: { opacity: 0.45 },
 });
@@ -292,5 +265,4 @@ export default {
   MessageBubble,
   ReplyChoice,
   ProfileRow,
-  BottomTabs,
 };
