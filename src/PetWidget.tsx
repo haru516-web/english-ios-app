@@ -29,7 +29,7 @@ const PET_SIZE = 84;
 const PET_EDGE_GUTTER = 8;
 const PET_TOP_INSET = 54;
 const ASK_CARD_WIDTH = 278;
-const ASK_CARD_HEIGHT = 214;
+const ASK_CARD_COMPACT_HEIGHT = 130;
 const nativeDriver = Platform.OS !== 'web';
 const webPetDragStyle = Platform.OS === 'web'
   ? ({ cursor: 'move', touchAction: 'none', userSelect: 'none' } as any)
@@ -255,6 +255,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   const [lookup, setLookup] = useState<PetDictionaryResult | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [askCardHeight, setAskCardHeight] = useState(ASK_CARD_COMPACT_HEIGHT);
   const savedRatioRef = useRef<{ x: number; y: number } | null>(null);
   const positionInitializedRef = useRef(false);
   const positionRef = useRef<Point>(position);
@@ -344,10 +345,16 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
     setLayout({ width, height });
   }, []);
 
+  const handleAskCardLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setAskCardHeight((current) => Math.abs(current - height) < 1 ? current : height);
+  }, []);
+
   const openAsk = useCallback(() => {
     movedRef.current = false;
     setPickerOpen(false);
     setAskOpen(true);
+    setAskCardHeight(ASK_CARD_COMPACT_HEIGHT);
     setLookup(null);
     setValidationMessage(null);
   }, []);
@@ -518,6 +525,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
     persist(id, position);
     setPickerOpen(false);
     setAskOpen(true);
+    setAskCardHeight(ASK_CARD_COMPACT_HEIGHT);
     setLookup(null);
     setValidationMessage(null);
   }, [persist, position]);
@@ -547,7 +555,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   }, [lookupLoading, word]);
 
   const cardWidth = Math.min(ASK_CARD_WIDTH, Math.max(0, layout.width - 16));
-  const cardHeight = lookup ? ASK_CARD_HEIGHT + 54 : lookupLoading ? ASK_CARD_HEIGHT + 28 : ASK_CARD_HEIGHT;
+  const cardHeight = askCardHeight;
   const cardMaxTop = Math.max(PET_TOP_INSET, layout.height - effectiveAvoidBottom - cardHeight);
   const cardLeft = clamp(position.x + PET_SIZE / 2 - cardWidth / 2, 8, Math.max(8, layout.width - cardWidth - 8));
   const cardAboveTop = position.y - cardHeight - 10;
@@ -564,16 +572,13 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   return (
     <View pointerEvents="box-none" onLayout={handleLayout} style={styles.overlay}>
       {askOpen && layout.width > 0 ? (
-        <View style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop, borderColor: pet.accent }]}>
+        <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop, borderColor: pet.accent }]}>
           <View style={styles.askHeader}>
             <View style={styles.askHeaderCopy}>
-              <Text style={styles.askEyebrow}>PET DICTIONARY</Text>
               <Text style={styles.askTitle}>単語や熟語を聞いてみる</Text>
-              <Text style={styles.askHint}>英単語・熟語を調べられるよ</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="ペットを選び直す" onPress={openPicker} style={styles.askPetButton}>
               <Image source={pet.image} resizeMode="contain" style={styles.askPetImage} />
-              <Text style={styles.askPetButtonLabel}>キャラ</Text>
             </Pressable>
           </View>
           <View style={styles.inputRow}>
@@ -581,6 +586,9 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
               ref={inputRef}
               value={word}
               onChangeText={(value) => {
+                lookupRequestRef.current += 1;
+                setLookupLoading(false);
+                setLookup(null);
                 setWord(sanitizePetInput(value));
                 setValidationMessage(null);
               }}
@@ -608,9 +616,6 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
               <Text numberOfLines={4} style={styles.answerText}>{petReply(pet, lookup)}</Text>
             </View>
           ) : null}
-          <View style={styles.askFooter}>
-            <Text style={styles.askPetName}>{pet.name} ・ {pet.catchphrase}</Text>
-          </View>
         </View>
       ) : null}
 
@@ -694,7 +699,6 @@ const styles = StyleSheet.create({
   },
   askCard: {
     position: 'absolute',
-    minHeight: ASK_CARD_HEIGHT,
     zIndex: 70,
     padding: 14,
     borderRadius: 22,
@@ -708,12 +712,9 @@ const styles = StyleSheet.create({
   },
   askHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 },
   askHeaderCopy: { flex: 1, paddingTop: 2 },
-  askEyebrow: { color: '#A9A5FF', fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
-  askTitle: { color: '#F5F7FB', fontSize: 17, fontWeight: '800', marginTop: 3 },
-  askHint: { color: '#8F96A7', fontSize: 11, marginTop: 3 },
+  askTitle: { color: '#F5F7FB', fontSize: 17, fontWeight: '800' },
   askPetButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   askPetImage: { width: 42, height: 42 },
-  askPetButtonLabel: { position: 'absolute', right: -3, bottom: -5, color: '#F4D6DD', fontSize: 9, fontWeight: '800' },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   wordInput: { flex: 1, height: 44, minWidth: 0, paddingHorizontal: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(255,255,255,0.075)', color: '#F5F7FB', fontSize: 15 },
   lookupButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#D58A9B' },
@@ -725,8 +726,6 @@ const styles = StyleSheet.create({
   answerKind: { color: '#B9B6FF', fontSize: 9, fontWeight: '900', letterSpacing: 0.7, marginBottom: 3 },
   answerWord: { color: '#F7DDE3', fontSize: 12, fontWeight: '900', letterSpacing: 0.4 },
   answerText: { color: '#F5F7FB', fontSize: 13, lineHeight: 19, marginTop: 3 },
-  askFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  askPetName: { flex: 1, color: '#82899A', fontSize: 10 },
   modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 24 },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
   pickerCard: { width: '100%', maxWidth: 410, maxHeight: '88%', minHeight: 420, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(242,200,211,0.4)', backgroundColor: 'rgba(17,20,30,0.985)', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: 0.46, shadowRadius: 26, shadowOffset: { width: 0, height: 16 }, elevation: 20 },
