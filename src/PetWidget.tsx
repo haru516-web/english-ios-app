@@ -8,7 +8,6 @@ import {
   Easing,
   Image,
   Keyboard,
-  Modal,
   PanResponder,
   Platform,
   Pressable,
@@ -25,7 +24,7 @@ import { lookupPetQuery, sanitizePetInput, type PetDictionaryResult } from './pe
 import { GlassSurfaceLight } from './ui';
 
 const PET_STORAGE_KEY = 'between.pet-widget.v1';
-const DEFAULT_PET_ID: PetId = 'babumoby';
+export const DEFAULT_PET_ID: PetId = 'babumoby';
 const PET_SIZE = 84;
 const PET_EDGE_GUTTER = 8;
 const PET_TOP_INSET = 54;
@@ -169,15 +168,17 @@ function PetIdleMotion({ children, active }: { children: React.ReactNode; active
   return <Animated.View style={motionStyle}>{children}</Animated.View>;
 }
 
-function PetPickerModal({
+function PetPickerOverlay({
   visible,
   selectedId,
   onClose,
+  onPreview,
   onConfirm,
 }: {
   visible: boolean;
   selectedId: PetId;
   onClose: () => void;
+  onPreview: (id: PetId) => void;
   onConfirm: (id: PetId) => void;
 }) {
   const [draftId, setDraftId] = useState<PetId>(selectedId);
@@ -186,17 +187,16 @@ function PetPickerModal({
     if (visible) setDraftId(selectedId);
   }, [selectedId, visible]);
 
-  return (
-    <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
+  const pickerContent = (
+    <View style={styles.modalRoot}>
         <Pressable accessibilityLabel="ペット選択を閉じる" accessibilityRole="button" onPress={onClose} style={styles.modalBackdrop} />
         <View accessibilityViewIsModal accessibilityLabel="ペットを選ぶ" style={styles.pickerCard}>
           <GlassSurfaceLight />
           <View style={styles.pickerHeader}>
             <View style={styles.pickerHeaderCopy}>
-              <Text style={styles.pickerEyebrow}>mobby collection</Text>
+              <View pointerEvents="none" style={styles.pickerEyebrowSpacer} />
               <Text style={styles.pickerTitle}>ペットを選ぶ</Text>
-              <Text style={styles.pickerSubtitle}>mobby-main と同じ9キャラ</Text>
+              <View pointerEvents="none" style={styles.pickerSubtitleSpacer} />
             </View>
             <Pressable accessibilityLabel="ペット選択を閉じる" accessibilityRole="button" onPress={onClose} style={styles.closeButton} hitSlop={8}>
               <Text style={styles.closeButtonText}>×</Text>
@@ -217,12 +217,15 @@ function PetPickerModal({
                   accessibilityRole="radio"
                   accessibilityLabel={`${pet.name}を選ぶ`}
                   accessibilityState={{ selected }}
-                  onPress={() => setDraftId(pet.id)}
+                  onPress={() => {
+                    setDraftId(pet.id);
+                    onPreview(pet.id);
+                  }}
                   style={({ pressed }) => [styles.pickerOption, pressed && styles.pickerOptionPressed]}
                 >
-                  <View style={[styles.pickerImageWrap, selected && { borderColor: pet.accent, shadowColor: pet.accent }]}>
+                  <View style={[styles.pickerImageWrap, selected && { borderColor: '#817BF0', shadowColor: '#766BFF' }]}>
                     <Image source={pet.image} resizeMode="contain" style={styles.pickerImage} />
-                    {selected ? <View style={[styles.pickerCheck, { backgroundColor: pet.accent }]}><Text style={styles.pickerCheckText}>✓</Text></View> : null}
+                    {selected ? <View style={[styles.pickerCheck, { backgroundColor: '#817BF0' }]}><Text style={styles.pickerCheckText}>✓</Text></View> : null}
                   </View>
                   <Text numberOfLines={1} style={[styles.pickerName, selected && styles.pickerNameSelected]}>{pet.name}</Text>
                   <Text numberOfLines={1} style={styles.pickerCatchphrase}>{pet.catchphrase}</Text>
@@ -240,12 +243,34 @@ function PetPickerModal({
             </Pressable>
           </View>
         </View>
-      </View>
-    </Modal>
+    </View>
+  );
+
+  if (!visible) return null;
+
+  return (
+    <View
+      pointerEvents="auto"
+      style={styles.pickerPreviewRoot}
+    >
+      {pickerContent}
+    </View>
   );
 }
 
-export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
+export function PetWidget({
+  avoidBottom = 126,
+  navigationPickerOpen = false,
+  onNavigationPickerClose,
+  hideFloatingPet = false,
+  onSelectedPetChange,
+}: {
+  avoidBottom?: number;
+  navigationPickerOpen?: boolean;
+  onNavigationPickerClose?: () => void;
+  hideFloatingPet?: boolean;
+  onSelectedPetChange?: (id: PetId) => void;
+}) {
   const [selectedId, setSelectedId] = useState<PetId>(DEFAULT_PET_ID);
   const [layout, setLayout] = useState<LayoutSize>({ width: 0, height: 0 });
   const [position, setPosition] = useState<Point>({ x: 0, y: 0 });
@@ -269,12 +294,19 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   const webIgnoreClickUntilRef = useRef(0);
   const inputRef = useRef<TextInput>(null);
   const lookupRequestRef = useRef(0);
+  const pickerInitialIdRef = useRef<PetId>(selectedId);
+  const navigationPickerWasOpenRef = useRef(false);
   const pet = getPetCharacter(selectedId);
+  const pickerVisible = pickerOpen || navigationPickerOpen;
   const effectiveAvoidBottom = Math.max(avoidBottom, keyboardHeight > 0 ? keyboardHeight + 20 : avoidBottom);
 
   useEffect(() => {
     positionRef.current = position;
   }, [position]);
+
+  useEffect(() => {
+    onSelectedPetChange?.(selectedId);
+  }, [onSelectedPetChange, selectedId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -355,7 +387,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   const openAsk = useCallback(() => {
     movedRef.current = false;
     setPickerOpen(false);
-    setAskOpen(true);
+    setAskOpen(!navigationPickerOpen && !hideFloatingPet);
     setAskCardHeight(ASK_CARD_COMPACT_HEIGHT);
     setLookup(null);
     setValidationMessage(null);
@@ -519,7 +551,28 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
     setAskOpen(false);
     inputRef.current?.blur();
     Keyboard.dismiss();
+    pickerInitialIdRef.current = selectedId;
     setPickerOpen(true);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (navigationPickerOpen && !navigationPickerWasOpenRef.current) {
+      setAskOpen(false);
+      inputRef.current?.blur();
+      Keyboard.dismiss();
+      pickerInitialIdRef.current = selectedId;
+    }
+    navigationPickerWasOpenRef.current = navigationPickerOpen;
+  }, [navigationPickerOpen, selectedId]);
+
+  const closePicker = useCallback(() => {
+    setSelectedId(pickerInitialIdRef.current);
+    setPickerOpen(false);
+    if (navigationPickerOpen) onNavigationPickerClose?.();
+  }, [navigationPickerOpen, onNavigationPickerClose]);
+
+  const previewPicker = useCallback((id: PetId) => {
+    setSelectedId(id);
   }, []);
 
   const confirmPicker = useCallback((id: PetId) => {
@@ -530,7 +583,8 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
     setAskCardHeight(ASK_CARD_COMPACT_HEIGHT);
     setLookup(null);
     setValidationMessage(null);
-  }, [persist, position]);
+    if (navigationPickerOpen) onNavigationPickerClose?.();
+  }, [hideFloatingPet, navigationPickerOpen, onNavigationPickerClose, persist, position]);
 
   const handleLookup = useCallback(() => {
     if (lookupLoading) return;
@@ -566,15 +620,19 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
     ? clamp(cardAboveTop, PET_TOP_INSET, cardMaxTop)
     : clamp(cardBelowTop, PET_TOP_INSET, cardMaxTop);
   const petVisual = (
-    <PetIdleMotion active={!askOpen && !pickerOpen}>
+    <PetIdleMotion active={!askOpen && !pickerVisible}>
       <Image source={pet.image} resizeMode="contain" style={styles.petImage} />
     </PetIdleMotion>
   );
 
   return (
-    <View pointerEvents="box-none" onLayout={handleLayout} style={styles.overlay}>
-      {askOpen && layout.width > 0 ? (
-        <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop, borderColor: pet.accent, shadowColor: pet.accent }]}>
+    <View
+      pointerEvents="box-none"
+      onLayout={handleLayout}
+      style={[styles.overlay, pickerVisible && styles.pickerOverlayHost]}
+    >
+      {askOpen && !hideFloatingPet && layout.width > 0 ? (
+        <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop }]}>
           <GlassSurfaceLight compact />
           <View style={styles.askHeader}>
             <View style={styles.askHeaderCopy}>
@@ -610,10 +668,10 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
               <Ionicons name="arrow-up" size={18} color="#F4EEFF" />
             </Pressable>
           </View>
-          {lookupLoading ? <View style={styles.lookupStatus}><ActivityIndicator size="small" color="#D58A9B" /><Text style={styles.lookupStatusText}>辞書を調べてるよ…</Text></View> : null}
+          {lookupLoading ? <View style={styles.lookupStatus}><ActivityIndicator size="small" color="#817BF0" /><Text style={styles.lookupStatusText}>辞書を調べてるよ…</Text></View> : null}
           {validationMessage ? <Text style={styles.validationMessage}>{validationMessage}</Text> : null}
           {lookup ? (
-            <View style={[styles.answerBubble, { backgroundColor: `${pet.accent}20`, borderColor: `${pet.accent}66` }]}>
+            <View style={[styles.answerBubble, { backgroundColor: 'rgba(109,103,225,0.42)', borderColor: '#817BF0' }]}>
               <Text style={styles.answerKind}>{lookupKindLabel(lookup.kind)}</Text>
               <Text style={styles.answerWord}>{lookup.word}</Text>
               <Text numberOfLines={4} style={styles.answerText}>{petReply(pet, lookup)}</Text>
@@ -622,6 +680,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
         </View>
       ) : null}
 
+      {!hideFloatingPet ? (
       <View style={[styles.petAnchor, { left: position.x, top: position.y }]}>
         {Platform.OS === 'web' ? (
           <View
@@ -656,18 +715,23 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
             </Pressable>
           </View>
         )}
-        <Pressable accessibilityRole="button" accessibilityLabel="ペットを選び直す" onPress={openPicker} style={({ pressed }) => [styles.petChooser, pressed && styles.pressed]}>
-          <Ionicons name="sparkles" size={12} color="#241A25" />
-        </Pressable>
       </View>
+      ) : null}
 
-      <PetPickerModal visible={pickerOpen} selectedId={selectedId} onClose={() => setPickerOpen(false)} onConfirm={confirmPicker} />
+      <PetPickerOverlay
+        visible={pickerVisible}
+        selectedId={selectedId}
+        onClose={closePicker}
+        onPreview={previewPicker}
+        onConfirm={confirmPicker}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 40 },
+  pickerOverlayHost: { zIndex: 60 },
   petAnchor: { position: 'absolute', width: PET_SIZE, height: PET_SIZE, zIndex: 42 },
   petDragSurface: {
     width: PET_SIZE,
@@ -678,42 +742,25 @@ const styles = StyleSheet.create({
     height: PET_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: PET_SIZE / 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
   },
   petPressed: { transform: [{ scale: 0.94 }], opacity: 0.85 },
   petImage: { width: 78, height: 78 },
-  petChooser: {
-    position: 'absolute',
-    right: -2,
-    bottom: -1,
-    width: 25,
-    height: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: '#F2C8D3',
-    borderWidth: 2,
-    borderColor: '#15161F',
-  },
   askCard: {
     position: 'absolute',
     zIndex: 70,
     padding: 14,
     borderRadius: 22,
-    borderWidth: 2,
-    borderTopColor: 'rgba(246,240,246,0.68)',
-    borderLeftColor: 'rgba(205,202,218,0.38)',
-    backgroundColor: 'rgba(12, 17, 34, 0.72)',
-    shadowColor: '#8F82FF',
+    borderWidth: 1,
+    borderColor: 'rgba(185,199,255,0.38)',
+    backgroundColor: 'rgba(14,20,40,0.76)',
+    shadowColor: '#766BFF',
     shadowOpacity: 0.34,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 12,
     overflow: 'hidden',
   },
   askHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 },
@@ -722,41 +769,42 @@ const styles = StyleSheet.create({
   askPetButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   askPetImage: { width: 42, height: 42 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wordInput: { flex: 1, height: 44, minWidth: 0, paddingHorizontal: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(179,195,255,0.30)', backgroundColor: 'rgba(32,40,72,0.52)', color: '#EEF0FF', fontSize: 15 },
-  lookupButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#D58A9B' },
+  wordInput: { flex: 1, height: 44, minWidth: 0, paddingHorizontal: 13, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', color: '#EEF0FF', fontSize: 15, shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  lookupButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: 'rgba(109,103,225,0.42)', borderWidth: 1, borderColor: '#817BF0', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   lookupButtonDisabled: { opacity: 0.38 },
   lookupStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 },
   lookupStatusText: { color: '#A9A5FF', fontSize: 11 },
   validationMessage: { color: '#F0B2C0', fontSize: 11, marginTop: 7 },
-  answerBubble: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 15, borderWidth: 1.75, borderTopColor: 'rgba(244,238,244,0.56)' },
+  answerBubble: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 15, borderWidth: 1, shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   answerKind: { color: '#B9B6FF', fontSize: 9, fontWeight: '900', letterSpacing: 0.7, marginBottom: 3 },
-  answerWord: { color: '#F7DDE3', fontSize: 12, fontWeight: '900', letterSpacing: 0.4 },
+  answerWord: { color: '#D8D2FF', fontSize: 12, fontWeight: '900', letterSpacing: 0.4 },
   answerText: { color: '#EEF0FF', fontSize: 13, lineHeight: 19, marginTop: 3 },
   modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 24 },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,5,15,0.68)' },
-  pickerCard: { width: '100%', maxWidth: 410, maxHeight: '88%', minHeight: 420, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(207,185,255,0.50)', borderTopColor: 'rgba(248,241,247,0.70)', borderLeftColor: 'rgba(208,201,218,0.38)', backgroundColor: 'rgba(13,17,35,0.84)', overflow: 'hidden', shadowColor: '#9A76FF', shadowOpacity: 0.38, shadowRadius: 34, shadowOffset: { width: 0, height: 16 }, elevation: 20 },
-  pickerHeader: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 20, paddingBottom: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(169,184,245,0.18)' },
+  pickerPreviewRoot: { ...StyleSheet.absoluteFillObject, zIndex: 80 },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,5,15,0.92)' },
+  pickerCard: { width: '100%', maxWidth: 410, maxHeight: '88%', minHeight: 420, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: '#0E1428', overflow: 'hidden', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  pickerHeader: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 20, paddingBottom: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(185,199,255,0.18)' },
   pickerHeaderCopy: { flex: 1 },
-  pickerEyebrow: { color: '#D58A9B', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  pickerEyebrowSpacer: { height: 11 },
   pickerTitle: { color: '#EEF0FF', fontSize: 22, fontWeight: '900', marginTop: 3 },
-  pickerSubtitle: { color: '#8C93A3', fontSize: 11, marginTop: 4 },
+  pickerSubtitleSpacer: { height: 13, marginTop: 4 },
   closeButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', marginTop: -4 },
-  closeButtonText: { color: '#D9B5BE', fontSize: 30, lineHeight: 32, fontWeight: '300' },
+  closeButtonText: { color: '#C8C2FF', fontSize: 30, lineHeight: 32, fontWeight: '300' },
   pickerScroll: { flex: 1, minHeight: 0 },
   pickerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 13, paddingHorizontal: 18, paddingTop: 17, paddingBottom: 18 },
   pickerOption: { width: '31.5%', alignItems: 'center', paddingVertical: 3 },
   pickerOptionPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
-  pickerImageWrap: { width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(105,119,191,0.10)' },
+  pickerImageWrap: { width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   pickerImage: { width: '91%', height: '91%' },
   pickerCheck: { position: 'absolute', top: 0, right: 0, width: 23, height: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   pickerCheckText: { color: '#241A25', fontSize: 14, lineHeight: 16, fontWeight: '900' },
   pickerName: { maxWidth: '100%', color: '#8E95A6', fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-  pickerNameSelected: { color: '#F3D5DC' },
+  pickerNameSelected: { color: '#D8D2FF' },
   pickerCatchphrase: { maxWidth: '100%', color: '#626A7B', fontSize: 9, lineHeight: 13, textAlign: 'center' },
-  pickerFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(169,184,245,0.18)' },
-  pickerCancel: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(185,198,255,0.30)', backgroundColor: 'rgba(48,57,96,0.30)' },
-  pickerConfirm: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: '#D58A9B' },
+  pickerFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: 'rgba(185,199,255,0.18)' },
+  pickerCancel: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  pickerConfirm: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: 'rgba(109,103,225,0.42)', borderWidth: 1, borderColor: '#817BF0', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   pickerCancelText: { color: '#BFC5D2', fontSize: 13, fontWeight: '700' },
-  pickerConfirmText: { color: '#281B25', fontSize: 13, fontWeight: '900' },
+  pickerConfirmText: { color: '#F2EEFF', fontSize: 13, fontWeight: '900' },
   pressed: { opacity: 0.72 },
 });

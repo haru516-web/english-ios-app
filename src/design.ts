@@ -7,21 +7,21 @@
 export type Gradient = readonly [string, string, ...string[]];
 
 export const colors = {
-  background: '#050505',
-  surface: '#0C1022',
-  surfaceRaised: '#141A31',
-  glass: 'rgba(15, 20, 39, 0.58)',
-  glassStrong: 'rgba(20, 25, 49, 0.76)',
-  glassBorder: 'rgba(177, 190, 255, 0.30)',
-  glassHighlight: 'rgba(224, 207, 255, 0.16)',
+  background: '#000000',
+  surface: '#0E1428',
+  surfaceRaised: '#161D3B',
+  glass: 'rgba(14, 20, 40, 0.76)',
+  glassStrong: 'rgba(78, 70, 173, 0.78)',
+  glassBorder: 'rgba(185, 199, 255, 0.38)',
+  glassHighlight: 'rgba(204, 197, 255, 0.68)',
   textPrimary: '#EEF0FF',
-  textSecondary: '#B1B7D2',
-  textMuted: '#777F9E',
-  accent: '#7771E8',
-  accentBlue: '#6E8CFF',
-  accentSoft: 'rgba(119, 113, 232, 0.22)',
+  textSecondary: '#BFC5E4',
+  textMuted: '#848CA9',
+  accent: '#817BF0',
+  accentBlue: '#766BFF',
+  accentSoft: 'rgba(109, 103, 225, 0.42)',
   success: '#70D5A4',
-  divider: 'rgba(151, 167, 232, 0.16)',
+  divider: 'rgba(185, 199, 255, 0.18)',
   white: '#F2EEFF',
   black: '#000000',
 } as const;
@@ -56,9 +56,9 @@ export const typography = {
 export const shadows = {
   glass: {
     shadowColor: colors.accentBlue,
-    shadowOpacity: 0.30,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   floating: {
@@ -115,7 +115,7 @@ export interface Message {
   sender: MessageSender;
   kind?: MessageKind;
   text: string;
-  timestamp: string;
+  timestamp: string | number;
   translation?: TranslationState;
   isRead?: boolean;
 }
@@ -129,7 +129,7 @@ export interface ReplyChoice {
 export interface ReplyResponse {
   id: MessageId;
   text: string;
-  timestamp: string;
+  timestamp: string | number;
   translation?: TranslationState;
 }
 

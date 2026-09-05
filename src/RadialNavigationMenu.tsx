@@ -22,6 +22,7 @@ export type RadialNavigationMenuProps = {
   items: RadialNavigationItem[];
   activeKey: string;
   onChange: (key: string) => void;
+  onPreviewChange?: (key: string | null) => void;
   onOpenChange?: (open: boolean) => void;
   style?: StyleProp<ViewStyle>;
 };
@@ -35,9 +36,10 @@ type WebPointerTarget = {
 
 const MENU_SIZE = 338;
 const MAIN_SIZE = 68;
-const ITEM_SIZE = 68;
+const ITEM_SIZE = 64;
 const MENU_EDGE = 12;
 const ITEM_RADIUS = 144;
+const FOUR_ITEM_RADIUS = 170;
 const LONG_PRESS_MS = 350;
 const MOVE_TOLERANCE = 10;
 const HIT_RADIUS = ITEM_SIZE / 2 + 8;
@@ -75,7 +77,7 @@ function distanceBetween(first: Point, second: Point) {
   return Math.hypot(first.x - second.x, first.y - second.y);
 }
 
-export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange, style }: RadialNavigationMenuProps) {
+export function RadialNavigationMenu({ items, activeKey, onChange, onPreviewChange, onOpenChange, style }: RadialNavigationMenuProps) {
   const rootRef = useRef<View | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredKey, setHoveredKeyState] = useState<string | null>(null);
@@ -92,15 +94,17 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
   const selectedEpochRef = useRef<number | null>(null);
 
   const itemPositions = useMemo<ItemPosition[]>(() => {
-    const startAngle = -Math.PI * 0.94;
-    const endAngle = -Math.PI * 0.51;
+    const hasFourOrMoreItems = items.length >= 4;
+    const startAngle = hasFourOrMoreItems ? -Math.PI : -Math.PI * 0.94;
+    const endAngle = hasFourOrMoreItems ? -Math.PI * 0.5 : -Math.PI * 0.51;
+    const itemRadius = hasFourOrMoreItems ? FOUR_ITEM_RADIUS : ITEM_RADIUS;
     const angleStep = items.length > 1 ? (endAngle - startAngle) / (items.length - 1) : 0;
     return items.map((item, index) => {
       const angle = items.length === 1 ? -Math.PI * 0.72 : startAngle + angleStep * index;
       return {
         ...item,
-        centerX: MAIN_CENTER.x + Math.cos(angle) * ITEM_RADIUS,
-        centerY: MAIN_CENTER.y + Math.sin(angle) * ITEM_RADIUS,
+        centerX: MAIN_CENTER.x + Math.cos(angle) * itemRadius,
+        centerY: MAIN_CENTER.y + Math.sin(angle) * itemRadius,
       };
     });
   }, [items]);
@@ -114,9 +118,12 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
     if (isOpenRef.current === open) return;
     isOpenRef.current = open;
     setIsOpen(open);
-    if (!open) setHoveredKey(null);
+    if (!open) {
+      setHoveredKey(null);
+      onPreviewChange?.(null);
+    }
     onOpenChange?.(open);
-  }, [onOpenChange, setHoveredKey]);
+  }, [onOpenChange, onPreviewChange, setHoveredKey]);
 
   const toggleMenu = useCallback(() => setMenuOpen(!isOpenRef.current), [setMenuOpen]);
 
@@ -167,12 +174,17 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
       longPressRef.current = true;
       setMenuOpen(true);
       setHoveredKey(null);
+      onPreviewChange?.(null);
     }, LONG_PRESS_MS);
-  }, [clearLongPressTimer, setHoveredKey, setMenuOpen]);
+  }, [clearLongPressTimer, onPreviewChange, setHoveredKey, setMenuOpen]);
 
   const updateDragHighlight = useCallback((point: Point) => {
-    if (longPressRef.current) setHoveredKey(findItemAtPoint(point));
-  }, [findItemAtPoint, setHoveredKey]);
+    if (!longPressRef.current) return;
+    const nextKey = findItemAtPoint(point);
+    if (hoveredKeyRef.current === nextKey) return;
+    setHoveredKey(nextKey);
+    onPreviewChange?.(nextKey);
+  }, [findItemAtPoint, onPreviewChange, setHoveredKey]);
 
   const finishInteraction = useCallback((cancelled: boolean, shouldToggleOnTap: boolean) => {
     if (!pressedRef.current) return;
@@ -315,6 +327,8 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
   }, [items, setHoveredKey]);
 
   useEffect(() => () => clearLongPressTimer(), [clearLongPressTimer]);
+
+  useEffect(() => () => onPreviewChange?.(null), [onPreviewChange]);
 
   useEffect(() => () => onOpenChange?.(false), [onOpenChange]);
 
