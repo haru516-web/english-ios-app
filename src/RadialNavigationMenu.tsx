@@ -371,7 +371,7 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
         onAccessibilityTap={toggleMenu}
         style={[styles.mainButton, isOpen && styles.mainButtonOpen, Platform.OS === 'web' && styles.webMainButton]}
       >
-        <Ionicons pointerEvents="none" name={isOpen ? 'close' : 'grid-outline'} size={28} color="#FFFFFF" />
+        <Ionicons pointerEvents="none" name={isOpen ? 'close' : 'grid-outline'} size={28} color="#F2EEFF" />
       </View>
     </View>
   );
@@ -379,15 +379,15 @@ export function RadialNavigationMenu({ items, activeKey, onChange, onOpenChange,
 
 const styles = StyleSheet.create({
   root: { position: 'absolute', right: 12, bottom: 12, width: MENU_SIZE, height: MENU_SIZE, zIndex: 50, elevation: 50, overflow: 'visible' },
-  mainButton: { position: 'absolute', left: MAIN_LEFT, top: MAIN_TOP, width: MAIN_SIZE, height: MAIN_SIZE, alignItems: 'center', justifyContent: 'center', borderRadius: MAIN_SIZE / 2, borderWidth: 1, borderColor: 'rgba(195,191,255,0.55)', backgroundColor: 'rgba(76,70,168,0.94)', shadowColor: '#000000', shadowOpacity: 0.42, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
-  mainButtonOpen: { backgroundColor: 'rgba(99,93,207,0.98)', borderColor: 'rgba(222,220,255,0.82)' },
+  mainButton: { position: 'absolute', left: MAIN_LEFT, top: MAIN_TOP, width: MAIN_SIZE, height: MAIN_SIZE, alignItems: 'center', justifyContent: 'center', borderRadius: MAIN_SIZE / 2, borderWidth: 1, borderColor: 'rgba(204,197,255,0.68)', backgroundColor: 'rgba(78,70,173,0.78)', shadowColor: '#8174FF', shadowOpacity: 0.52, shadowRadius: 22, shadowOffset: { width: 0, height: 8 } },
+  mainButtonOpen: { backgroundColor: 'rgba(108,96,221,0.82)', borderColor: 'rgba(226,216,255,0.88)' },
   webMainButton: { cursor: 'pointer', touchAction: 'none', userSelect: 'none', WebkitTapHighlightColor: 'transparent' } as any,
-  item: { position: 'absolute', width: ITEM_SIZE, height: ITEM_SIZE, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.17)', backgroundColor: 'rgba(20,24,34,0.96)', shadowColor: '#000000', shadowOpacity: 0.32, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  item: { position: 'absolute', width: ITEM_SIZE, height: ITEM_SIZE, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   itemActive: { borderColor: '#817BF0', backgroundColor: 'rgba(109,103,225,0.42)' },
   itemHovered: { borderColor: '#70D5C9', backgroundColor: 'rgba(46,113,111,0.58)', transform: [{ scale: 1.08 }] },
   itemActiveHovered: { borderColor: '#B4F0E4', backgroundColor: 'rgba(94,112,208,0.66)' },
   itemPressed: { opacity: 0.78 },
   itemIcon: { height: 23, minWidth: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 1 },
   fallbackIcon: { color: '#B9C0CC', fontSize: 20, lineHeight: 21 },
-  itemLabel: { maxWidth: ITEM_SIZE - 8, color: '#F5F7FB', fontSize: 11, fontWeight: '700', lineHeight: 13, textAlign: 'center' },
+  itemLabel: { maxWidth: ITEM_SIZE - 8, color: '#EEF0FF', fontSize: 11, fontWeight: '700', lineHeight: 13, textAlign: 'center' },
 });

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { PetWidget } from './src/PetWidget';
 import { RadialNavigationMenu } from './src/RadialNavigationMenu';
@@ -24,20 +25,19 @@ import {
   ChatSummary,
   Message,
   ReplyChoice,
-  ReplyResponse,
   chatSummaries,
   characters,
   colors,
   getCharacter,
-  getMessagesForChat,
-  replyPrompts,
   spacing,
   typography,
 } from './src/design';
+import { buildConversationReply, getConversationRound } from './src/conversations';
 import {
   Avatar,
   ChatRow,
   GlassPanel,
+  GlassSurfaceLight,
   IconButton,
   MessageBubble,
   ProfileRow,
@@ -48,8 +48,14 @@ import {
 
 type TabKey = 'chats' | 'people' | 'me';
 
+type PendingConversationReply = {
+  characterId: CharacterId;
+  reply: NonNullable<ReturnType<typeof buildConversationReply>>;
+};
+
 const initialFriends: CharacterId[] = ['jack', 'emma', 'oliver'];
 const iconColor = colors.textSecondary;
+const webAmbientBlurStyle = Platform.OS === 'web' ? ({ filter: 'blur(54px)' } as any) : undefined;
 
 function AppIcon({
   name,
@@ -67,8 +73,13 @@ function ScreenBackground({ children, petAvoidBottom = 126 }: { children: React.
   const { width } = useWindowDimensions();
   return (
     <View style={styles.canvas}>
-      <View pointerEvents="none" style={[styles.glow, width > 600 && styles.glowWide]} />
+      <LinearGradient pointerEvents="none" colors={['#080808', '#020203', '#060605']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
+      <View pointerEvents="none" style={[styles.outerGlow, width > 600 && styles.outerGlowWide, webAmbientBlurStyle]} />
       <View style={[styles.phoneFrame, width > 560 && styles.desktopPhoneFrame]}>
+        <LinearGradient pointerEvents="none" colors={['rgba(18,18,18,0.98)', 'rgba(3,3,4,0.99)', 'rgba(10,9,8,0.98)']} start={{ x: 0.9, y: 0 }} end={{ x: 0.15, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient pointerEvents="none" colors={['rgba(255,250,240,0.17)', 'rgba(236,232,222,0.04)', 'rgba(236,232,222,0)']} start={{ x: 0.95, y: 0 }} end={{ x: 0.1, y: 0.76 }} style={styles.lightBeam} />
+        <View pointerEvents="none" style={[styles.glowTop, webAmbientBlurStyle]} />
+        <View pointerEvents="none" style={[styles.glowBottom, webAmbientBlurStyle]} />
         <StatusBar style="light" />
         <SafeAreaView style={styles.safeArea}>{children}</SafeAreaView>
         <PetWidget avoidBottom={petAvoidBottom} />
@@ -115,32 +126,22 @@ function formatChatSummary(character: Character, summary?: ChatSummary): ChatSum
 
 function ChatsScreen({
   friends,
-  search,
-  setSearch,
   openChat,
   openPeople,
 }: {
   friends: CharacterId[];
-  search: string;
-  setSearch: (value: string) => void;
   openChat: (id: CharacterId) => void;
   openPeople: () => void;
 }) {
-  const chats = useMemo(() => {
-    const normalized = search.trim().toLowerCase();
-    return friends
-      .map((id) => {
-        const character = getCharacter(id)!;
-        return { character, summary: formatChatSummary(character, chatSummaries.find((item) => item.characterId === id)) };
-      })
-      .filter(({ character, summary }) => !normalized || `${character.name} ${summary.preview}`.toLowerCase().includes(normalized));
-  }, [friends, search]);
+  const chats = useMemo(() => friends.map((id) => {
+    const character = getCharacter(id)!;
+    return { character, summary: formatChatSummary(character, chatSummaries.find((item) => item.characterId === id)) };
+  }), [friends]);
 
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <MainHeader title="Chats" onCompose={openPeople} />
-        <SearchField value={search} onChangeText={setSearch} />
+        <MainHeader title="Chats" />
 
         <StatusLine right={<Text style={styles.statusLineRight}>{friends.length} people</Text>}>
           <View style={styles.liveDot} />
@@ -161,16 +162,11 @@ function ChatsScreen({
               style={styles.chatRowSpacing}
             />
           ))}
-          {chats.length === 0 ? (
-            <GlassPanel style={styles.emptyPanel}>
-              <AppIcon name="search-outline" size={22} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>No conversations found</Text>
-              <Text style={styles.emptyCopy}>Try another name or meet someone new.</Text>
-            </GlassPanel>
-          ) : null}
+
         </View>
 
         <Pressable onPress={openPeople} accessibilityRole="button" accessibilityLabel="Meet someone new" style={({ pressed }) => [styles.discoverCard, pressed && styles.pressed]}>
+          <GlassSurfaceLight />
           <View style={styles.discoverIcon}><AppIcon name="sparkles-outline" size={19} color="#C9C7FF" /></View>
           <View style={styles.discoverCopy}>
             <Text style={styles.discoverTitle}>Meet someone new</Text>
@@ -186,6 +182,7 @@ function ChatsScreen({
 function FriendCard({ character, onPress }: { character: Character; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open ${character.name}'s profile`} style={({ pressed }) => [styles.friendCard, pressed && styles.pressed]}>
+      <GlassSurfaceLight compact />
       <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={58} />
       <View style={styles.friendCardNameRow}>
         <Text style={styles.friendCardName}>{character.name}</Text>
@@ -382,21 +379,26 @@ function ChatDetailScreen({
   canSend: boolean;
 }) {
   const chatId = `chat-${character.id}` as ChatId;
-  const baseMessages = getMessagesForChat(chatId);
-  const threadMessages = baseMessages.length ? baseMessages : [{
-    id: `${character.id}-hello`,
+  const conversationMessages = sentMessages.filter((message) => message.chatId === chatId);
+  const completedRounds = conversationMessages.filter((message) => message.sender === 'user').length;
+  const openingRound = getConversationRound(character.id, 0);
+  const openingMessage: Message = {
+    id: `${character.id}-opening`,
     chatId,
-    sender: 'character' as const,
-    text: `Hey. I wasn't sure if I should text first.`,
+    sender: 'character',
+    text: openingRound?.promptEnglish || `Hey. I wasn't sure if I should text first.`,
     timestamp: 'now',
-    translation: { english: [`Hey. I wasn't sure if I should text first.`], japanese: ['ねえ。先に連絡していいのか迷ってた。'] },
-  }];
-  const allMessages = [...threadMessages, ...sentMessages.filter((message) => message.chatId === chatId)];
-  const isJack = character.id === 'jack';
+    translation: {
+      english: [openingRound?.promptEnglish || `Hey. I wasn't sure if I should text first.`],
+      japanese: [openingRound?.promptJapanese || 'ねえ。先に連絡していいのか迷ってた。'],
+    },
+  };
+  const allMessages = [openingMessage, ...conversationMessages];
   const latestMessage = allMessages[allMessages.length - 1];
-  const prompt = latestMessage?.sender === 'character' ? replyPrompts.find((item) => item.messageId === latestMessage.id) : undefined;
-  const canShowReplyPrompt = Boolean(prompt && isJack && latestMessage?.sender === 'character');
-  const isWaitingForCharacter = Boolean(isJack && latestMessage?.sender === 'user');
+  const round = getConversationRound(character.id, completedRounds);
+  const canShowReplyPrompt = Boolean(round && latestMessage.sender === 'character');
+  const isWaitingForCharacter = latestMessage.sender === 'user';
+  const conversationComplete = completedRounds >= 50 && latestMessage.sender === 'character';
 
   return (
     <KeyboardAvoidingView style={styles.chatScreen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -409,7 +411,7 @@ function ChatDetailScreen({
           </View>
           <View style={styles.chatIdentityCopy}>
             <Text style={styles.chatIdentityName}>{character.name}</Text>
-            <Text style={styles.chatIdentityStatus}>{isJack ? 'Online now' : character.tone}</Text>
+            <Text style={styles.chatIdentityStatus}>{character.tone}</Text>
           </View>
         </View>
         <IconButton label="More options" icon={<AppIcon name="ellipsis-horizontal" size={23} color={colors.textPrimary} />} />
@@ -430,13 +432,19 @@ function ChatDetailScreen({
       </ScrollView>
 
       <View style={styles.replyDock}>
-        {canShowReplyPrompt && prompt ? (
+        {conversationComplete ? (
+          <View style={styles.replyDockHeader}>
+            <Text style={styles.replyDockTitle}>Conversation complete</Text>
+            <Text style={styles.replyDockHint}>50 rounds</Text>
+          </View>
+        ) : null}
+        {canShowReplyPrompt && round ? (
           <View style={styles.replyDockHeader}>
             <Text style={styles.replyDockTitle}>What do you want to say?</Text>
             <Text style={styles.replyDockHint}>Choose your meaning</Text>
           </View>
         ) : null}
-        {canShowReplyPrompt && prompt ? (
+        {canShowReplyPrompt && round ? (
           <ScrollView
             style={styles.replyChoices}
             contentContainerStyle={styles.replyChoicesContent}
@@ -444,8 +452,8 @@ function ChatDetailScreen({
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
           >
-            {prompt.choices.map((choice) => (
-              <ReplyChoiceButton key={choice.id} text={choice.japanese} selected={selectedReply?.id === choice.id} onPress={() => onSelectReply(choice, prompt.messageId)} />
+            {round.choices.map((choice) => (
+              <ReplyChoiceButton key={choice.id} text={choice.japanese} selected={selectedReply?.id === choice.id} onPress={() => onSelectReply(choice, round.id)} />
             ))}
           </ScrollView>
         ) : null}
@@ -459,8 +467,8 @@ function ChatDetailScreen({
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            editable={Boolean(selectedReply)}
-            placeholder={selectedReply ? 'Type the phrase above…' : 'Choose a reply first'}
+            editable={Boolean(selectedReply) && !conversationComplete}
+            placeholder={conversationComplete ? 'Conversation complete' : selectedReply ? 'Type the phrase above…' : 'Choose a reply first'}
             placeholderTextColor={colors.textMuted}
             style={styles.composerInput}
             accessibilityLabel="Type your English reply"
@@ -469,7 +477,7 @@ function ChatDetailScreen({
           <IconButton
             label="Send message"
             variant="accent"
-            disabled={!canSend}
+            disabled={!canSend || conversationComplete}
             onPress={onSend}
             icon={<AppIcon name="arrow-up" size={21} color={colors.white} />}
           />
@@ -478,7 +486,6 @@ function ChatDetailScreen({
     </KeyboardAvoidingView>
   );
 }
-
 export default function AppMain() {
   const [activeTab, setActiveTab] = useState<TabKey>('chats');
   const [radialMenuOpen, setRadialMenuOpen] = useState(false);
@@ -490,7 +497,7 @@ export default function AppMain() {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [sentMessages, setSentMessages] = useState<Message[]>([]);
-  const [pendingJackReply, setPendingJackReply] = useState<ReplyResponse | null>(null);
+  const [pendingConversationReplies, setPendingConversationReplies] = useState<PendingConversationReply[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -501,19 +508,19 @@ export default function AppMain() {
   }, [toast]);
 
   useEffect(() => {
-    const reply = pendingJackReply;
-    if (!reply || activeCharacterId !== 'jack') return undefined;
+    if (!pendingConversationReplies.length) return undefined;
     const timer = setTimeout(() => {
-      setSentMessages((current) => [...current, {
-        ...reply,
-        chatId: 'chat-jack' as ChatId,
+      setSentMessages((current) => [...current, ...pendingConversationReplies.map((pending) => ({
+        ...pending.reply,
+        chatId: `chat-${pending.characterId}` as ChatId,
         sender: 'character' as const,
+        timestamp: 'now',
         isRead: false,
-      }]);
-      setPendingJackReply(null);
+      }))]);
+      setPendingConversationReplies([]);
     }, 1400);
     return () => clearTimeout(timer);
-  }, [activeCharacterId, pendingJackReply]);
+  }, [pendingConversationReplies]);
 
   const activeCharacter = activeCharacterId ? getCharacter(activeCharacterId) : undefined;
   const canSend = Boolean(selectedReply && isAcceptableReply(draft, selectedReply.english));
@@ -525,7 +532,6 @@ export default function AppMain() {
     setSearch('');
     setSelectedReply(null);
     setSelectedPromptId(null);
-    setPendingJackReply(null);
     setDraft('');
   };
 
@@ -548,10 +554,13 @@ export default function AppMain() {
   };
 
   const sendReply = () => {
-    if (!activeCharacterId || !selectedReply || !canSend) return;
+    if (!activeCharacterId || !selectedReply || !canSend || !selectedPromptId) return;
     const chatId = `chat-${activeCharacterId}` as ChatId;
-    const prompt = selectedPromptId ? replyPrompts.find((item) => item.messageId === selectedPromptId) : undefined;
-    const response = prompt?.responses[selectedReply.id];
+    const roundIndex = sentMessages.filter((message) => message.chatId === chatId && message.sender === 'user').length;
+    const round = getConversationRound(activeCharacterId, roundIndex);
+    if (!round || round.id !== selectedPromptId) return;
+    const response = buildConversationReply(activeCharacterId, roundIndex, selectedReply.id);
+    if (!response) return;
     setSentMessages((current) => [...current, {
       id: `local-${Date.now()}`,
       chatId,
@@ -560,7 +569,7 @@ export default function AppMain() {
       timestamp: 'now',
       isRead: true,
     }]);
-    setPendingJackReply(response ?? null);
+    setPendingConversationReplies((current) => [...current.filter((pending) => pending.characterId !== activeCharacterId), { characterId: activeCharacterId, reply: response }]);
     setSelectedReply(null);
     setSelectedPromptId(null);
     setDraft('');
@@ -591,7 +600,7 @@ export default function AppMain() {
         />
       ) : (
         <View style={styles.appBody}>
-          {activeTab === 'chats' ? <ChatsScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} openPeople={openPeople} /> : null}
+          {activeTab === 'chats' ? <ChatsScreen friends={friends} openChat={openChat} openPeople={openPeople} /> : null}
           {activeTab === 'people' ? <PeopleScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} meet={meet} /> : null}
           {activeTab === 'me' ? <MeScreen notificationsEnabled={notificationsEnabled} toggleNotifications={() => setNotificationsEnabled((value) => !value)} showToast={showToast} /> : null}
           <RadialNavigationMenu activeKey={activeTab} onOpenChange={setRadialMenuOpen} onChange={(key) => { setActiveTab(key as TabKey); setSearch(''); }} items={[
@@ -607,11 +616,14 @@ export default function AppMain() {
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#020307' },
-  glow: { position: 'absolute', width: 410, height: 410, borderRadius: 205, backgroundColor: 'rgba(87,78,204,0.11)', top: -170, right: -160 },
-  glowWide: { width: 620, height: 620, borderRadius: 310, top: -260, right: -260 },
-  phoneFrame: { flex: 1, width: '100%', maxWidth: 430, backgroundColor: colors.background, overflow: 'hidden' },
-  desktopPhoneFrame: { borderRadius: 42, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', marginVertical: 18, maxHeight: 900, shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 40, shadowOffset: { width: 0, height: 22 }, elevation: 16 },
+  canvas: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#020202' },
+  outerGlow: { position: 'absolute', width: 460, height: 460, borderRadius: 230, backgroundColor: 'rgba(244,239,228,0.10)', top: -180, right: -150, shadowColor: '#F4EFE4', shadowOpacity: 0.42, shadowRadius: 100, shadowOffset: { width: 0, height: 0 } },
+  outerGlowWide: { width: 700, height: 700, borderRadius: 350, top: -290, right: -250 },
+  phoneFrame: { flex: 1, width: '100%', maxWidth: 430, backgroundColor: 'rgba(3,3,3,0.96)', overflow: 'hidden' },
+  desktopPhoneFrame: { borderRadius: 42, borderWidth: 2, borderColor: 'rgba(240,236,226,0.28)', marginVertical: 18, maxHeight: 900, shadowColor: '#F4EFE4', shadowOpacity: 0.24, shadowRadius: 54, shadowOffset: { width: 0, height: 20 }, elevation: 18 },
+  lightBeam: { ...StyleSheet.absoluteFillObject, opacity: 0.72 },
+  glowTop: { position: 'absolute', width: 230, height: 230, borderRadius: 115, top: -96, right: -86, backgroundColor: 'rgba(255,250,238,0.11)', shadowColor: '#FFF6E8', shadowOpacity: 0.58, shadowRadius: 84, shadowOffset: { width: 0, height: 0 } },
+  glowBottom: { position: 'absolute', width: 270, height: 270, borderRadius: 135, left: -160, bottom: 34, backgroundColor: 'rgba(239,235,226,0.06)', shadowColor: '#F0ECE2', shadowOpacity: 0.38, shadowRadius: 96, shadowOffset: { width: 0, height: 0 } },
   safeArea: { flex: 1 },
   appBody: { flex: 1 },
   screen: { flex: 1 },
@@ -628,13 +640,13 @@ const styles = StyleSheet.create({
   emptyPanel: { minHeight: 160, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, marginTop: 4 },
   emptyTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginTop: 10 },
   emptyCopy: { color: colors.textMuted, fontSize: 13, marginTop: 5, textAlign: 'center' },
-  discoverCard: { flexDirection: 'row', alignItems: 'center', marginTop: 18, padding: 15, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(141,137,255,0.28)', backgroundColor: 'rgba(88,82,182,0.14)' },
+  discoverCard: { flexDirection: 'row', alignItems: 'center', marginTop: 18, padding: 15, borderRadius: 19, borderWidth: 2, borderColor: 'rgba(174,184,255,0.46)', borderTopColor: 'rgba(242,238,245,0.68)', borderLeftColor: 'rgba(198,201,220,0.38)', borderBottomColor: 'rgba(103,103,135,0.22)', backgroundColor: 'rgba(79,75,164,0.22)', shadowColor: '#8175FF', shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 9 }, overflow: 'hidden' },
   discoverIcon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: 'rgba(134,128,255,0.16)', marginRight: 12 },
   discoverCopy: { flex: 1 },
   discoverTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   discoverSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
   friendRail: { gap: 10, paddingBottom: 2 },
-  friendCard: { width: 112, minHeight: 128, alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(20,24,34,0.77)' },
+  friendCard: { width: 112, minHeight: 128, alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(175,190,255,0.38)', borderTopColor: 'rgba(240,237,244,0.64)', borderLeftColor: 'rgba(194,199,222,0.34)', borderBottomColor: 'rgba(96,101,132,0.20)', backgroundColor: 'rgba(15,21,42,0.56)', shadowColor: '#756AFF', shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 9 }, overflow: 'hidden' },
   friendCardNameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 9 },
   friendCardName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   friendOnlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accentBlue, marginLeft: 5 },
@@ -648,7 +660,7 @@ const styles = StyleSheet.create({
   personName: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
   personMeta: { color: colors.textMuted, fontSize: 11 },
   personBio: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 },
-  meetButton: { minWidth: 57, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12 },
+  meetButton: { minWidth: 57, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 19, backgroundColor: 'rgba(82,96,167,0.22)', borderWidth: 1, borderColor: 'rgba(186,200,255,0.34)', paddingHorizontal: 12 },
   meetButtonText: { color: colors.textPrimary, fontSize: 13, fontWeight: '700' },
   emptyPeople: { color: colors.textMuted, textAlign: 'center', paddingVertical: 28 },
   peopleFooter: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 26, paddingHorizontal: 30 },
@@ -678,20 +690,20 @@ const styles = StyleSheet.create({
   dateLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },
   dateText: { color: colors.textMuted, fontSize: 11 },
   typingLine: { alignItems: 'flex-start', marginTop: 5 },
-  typingBubble: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 13, borderRadius: 18, borderBottomLeftRadius: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.glassBorder, backgroundColor: 'rgba(33,38,49,0.82)' },
+  typingBubble: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 13, borderRadius: 18, borderBottomLeftRadius: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.glassBorder, backgroundColor: 'rgba(23,30,55,0.62)' },
   typingDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#B0B6C6' },
-  replyDock: { paddingHorizontal: 15, paddingTop: 11, paddingBottom: Platform.OS === 'ios' ? 8 : 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: 'rgba(5,7,11,0.92)' },
+  replyDock: { paddingHorizontal: 15, paddingTop: 11, paddingBottom: Platform.OS === 'ios' ? 8 : 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: 'rgba(8,11,27,0.76)' },
   replyDockHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7, paddingHorizontal: 2 },
   replyDockTitle: { color: colors.textPrimary, fontSize: 13, fontWeight: '700' },
   replyDockHint: { color: colors.textMuted, fontSize: 11 },
   replyChoices: { maxHeight: 184, marginBottom: 2 },
   replyChoicesContent: { gap: 2, paddingBottom: 2 },
-  englishSuggestion: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, marginTop: 6, marginBottom: 7, borderColor: 'rgba(144,139,255,0.36)', backgroundColor: 'rgba(98,91,193,0.17)' },
+  englishSuggestion: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, marginTop: 6, marginBottom: 7, borderColor: 'rgba(184,174,255,0.42)', backgroundColor: 'rgba(94,81,194,0.24)' },
   suggestionLabel: { color: '#AEA9FF', fontSize: 10, fontWeight: '700', marginBottom: 3, letterSpacing: 0.5 },
   suggestionText: { color: colors.textPrimary, fontSize: 14, lineHeight: 19 },
   composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 3 },
-  composerInput: { flex: 1, minHeight: 45, maxHeight: 92, borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.13)', backgroundColor: 'rgba(255,255,255,0.07)', color: colors.textPrimary, fontSize: 15, lineHeight: 20, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10 },
-  toast: { position: 'absolute', left: 28, right: 28, bottom: Platform.OS === 'ios' ? 91 : 95, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 38, paddingHorizontal: 15, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(157,240,200,0.26)', backgroundColor: 'rgba(14,29,27,0.94)' },
+  composerInput: { flex: 1, minHeight: 45, maxHeight: 92, borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(172,189,255,0.28)', backgroundColor: 'rgba(27,34,63,0.52)', color: colors.textPrimary, fontSize: 15, lineHeight: 20, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10 },
+  toast: { position: 'absolute', left: 28, right: 28, bottom: Platform.OS === 'ios' ? 91 : 95, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 38, paddingHorizontal: 15, borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(157,240,200,0.26)', backgroundColor: 'rgba(15,37,39,0.78)' },
   toastText: { color: '#DFFFEF', fontSize: 13, fontWeight: '600', marginLeft: 7 },
   pressed: { opacity: 0.72 },
 });

@@ -1,0 +1,137 @@
+import type { ConversationChoice, ConversationGroup, ConversationRound } from './conversationsTypes';
+
+type Beat = { en: string; ja: string; choices: [string, string][] };
+
+const makeRounds = (character: 'jack' | 'emma', beats: Beat[]): ConversationRound[] => beats.map((beat, index) => ({
+  id: `${character}-${String(index + 1).padStart(2, '0')}`,
+  promptEnglish: beat.en,
+  promptJapanese: beat.ja,
+  choices: beat.choices.map(([english, japanese], choiceIndex) => ({
+    id: `${character}-${String(index + 1).padStart(2, '0')}-${choiceIndex + 1}`,
+    english,
+    japanese,
+    responseEnglish: character === 'jack'
+      ? [`I like that answer—“${english}” feels relaxed and honest.`, `Nice choice. “${english}” tells me a little more about you.`, `That works for me. “${english}” sounds like a good little adventure.`][choiceIndex]
+      : [`I appreciate that answer—“${english}” feels thoughtful.`, `That makes sense. “${english}” gives me a clearer picture of you.`, `I’m glad you shared that. “${english}” sounds meaningful to me.`][choiceIndex],
+    responseJapanese: character === 'jack'
+      ? [`その答え、いいね。「${japanese}」って、気取らず正直な感じがする。`, `いい選択だね。「${japanese}」から、君のことが少し見えたよ。`, `それ、僕は好きだな。「${japanese}」なら、ちょっとした冒険になりそう。`][choiceIndex]
+      : [`その答え、うれしいな。「${japanese}」って、丁寧に考えた感じがするね。`, `なるほど。「${japanese}」から、君のことがもっとよく分かったよ。`, `話してくれてありがとう。「${japanese}」には大切な思いがあるんだね。`][choiceIndex],
+  })),
+}));
+
+const jackBeats: Beat[] = [
+  { en: 'What kind of day feels instantly good to you?', ja: 'どんな日だと、すぐに気分がよくなる？', choices: [['A sunny day', '晴れた日'], ['A slow day', 'ゆっくりできる日'], ['A day with good people', 'いい人たちと過ごす日']] },
+  { en: 'What is your easiest way to say hello?', ja: 'いちばん気軽なあいさつは？', choices: [['Hey, how’s it going?', 'やあ、元気？'], ['Good morning!', 'おはよう！'], ['Want some coffee?', 'コーヒー飲む？']] },
+  { en: 'Which small thing can make you laugh?', ja: 'どんな小さなことで笑う？', choices: [['A silly dog', 'おかしな犬'], ['A bad pun', 'くだらないダジャレ'], ['A friend’s funny face', '友だちの変な顔']] },
+  { en: 'When plans change, what do you usually do?', ja: '予定が変わったら、いつもどうする？', choices: [['Go with the flow', '流れに任せる'], ['Make a new plan', '新しい予定を立てる'], ['Take a break first', 'まず休憩する']] },
+  { en: 'What place helps you feel comfortable?', ja: 'どんな場所だと安心する？', choices: [['A quiet café', '静かなカフェ'], ['My own room', '自分の部屋'], ['A park with open space', '広い公園']] },
+  { en: 'What is one thing you never leave home without?', ja: '家を出るとき、必ず持つものは？', choices: [['My phone', 'スマホ'], ['A water bottle', '水筒'], ['A good attitude', '前向きな気持ち']] },
+  { en: 'What kind of compliment feels best?', ja: 'どんなほめ言葉が一番うれしい？', choices: [['You made me smile', 'あなたが私を笑顔にした'], ['You are reliable', 'あなたは頼りになる'], ['You have great style', 'あなたはセンスがいい']] },
+  { en: 'If we had an hour free, how would you spend it?', ja: 'もし1時間空いたら、どう過ごす？', choices: [['Take a walk', '散歩する'], ['Find a snack', 'おやつを探す'], ['Listen to music', '音楽を聴く']] },
+  { en: 'What does your morning usually look like?', ja: 'いつもの朝はどんな感じ？', choices: [['I wake up early', '早起きする'], ['I need one more minute', 'あと1分だけ必要'], ['I start with breakfast', '朝食から始める']] },
+  { en: 'What is your favorite kind of breakfast?', ja: '好きな朝食は？', choices: [['Eggs and toast', '卵とトースト'], ['Fruit and yogurt', 'フルーツとヨーグルト'], ['A big breakfast burrito', '大きな朝食ブリトー']] },
+  { en: 'How do you get around town?', ja: '町ではどうやって移動する？', choices: [['I walk a lot', 'よく歩く'], ['I take the train', '電車に乗る'], ['I ride my bike', '自転車に乗る']] },
+  { en: 'What music fits your commute?', ja: '通勤・通学中に合う音楽は？', choices: [['Upbeat pop', '明るいポップス'], ['A calm playlist', '落ち着いたプレイリスト'], ['A podcast', 'ポッドキャスト']] },
+  { en: 'How do you choose a restaurant?', ja: 'レストランはどう選ぶ？', choices: [['Follow the crowd', '人が多い店にする'], ['Try something new', '新しいものを試す'], ['Pick my comfort food', '好きな定番を選ぶ']] },
+  { en: 'What food could you eat every week?', ja: '毎週食べてもいい料理は？', choices: [['Tacos', 'タコス'], ['Noodles', '麺料理'], ['A fresh salad', '新鮮なサラダ']] },
+  { en: 'What do you do when you need to recharge?', ja: '元気を回復したいときは何をする？', choices: [['Sleep in', 'ゆっくり寝る'], ['Go outside', '外に出る'], ['Call a friend', '友だちに電話する']] },
+  { en: 'Are you an early bird or a night owl?', ja: '朝型？それとも夜型？', choices: [['I am an early bird', '朝型です'], ['I am a night owl', '夜型です'], ['It depends on the week', '週によります']] },
+  { en: 'What kind of weather makes you want to go out?', ja: 'どんな天気だと出かけたくなる？', choices: [['Cool and sunny', '涼しく晴れた日'], ['Warm and breezy', '暖かく風のある日'], ['A little rainy', '少し雨の日']] },
+  { en: 'What is your favorite way to spend a weekend?', ja: '週末の好きな過ごし方は？', choices: [['A road trip', '小旅行'], ['A home project', '家のことをする'], ['Brunch with friends', '友だちとブランチ']] },
+  { en: 'What makes a place feel like home?', ja: 'どんなことで、場所が家のように感じる？', choices: [['Good food', 'おいしい食べ物'], ['Familiar voices', '聞き慣れた声'], ['A comfortable chair', '座り心地のいい椅子']] },
+  { en: 'Which skill would you like to learn this year?', ja: '今年、どんなスキルを学びたい？', choices: [['Cook better', '料理が上手になる'], ['Speak another language', '別の言語を話す'], ['Fix things myself', '自分で修理する']] },
+  { en: 'What did you love doing as a kid?', ja: '子どものころ、何をするのが好きだった？', choices: [['Build forts', '秘密基地を作る'], ['Draw cartoons', '漫画を描く'], ['Explore outside', '外を探検する']] },
+  { en: 'Who taught you something you still use?', ja: '今も役立つことを教えてくれた人は？', choices: [['My parent', '親'], ['A teacher', '先生'], ['A close friend', '親しい友だち']] },
+  { en: 'What is a mistake that taught you a lesson?', ja: 'どんな失敗から学んだ？', choices: [['I rushed too much', '急ぎすぎた'], ['I did not speak up', '言うべきことを言わなかった'], ['I tried to do everything', '全部一人でやろうとした']] },
+  { en: 'What does freedom mean to you?', ja: 'あなたにとって自由とは？', choices: [['Choosing my own path', '自分の道を選ぶこと'], ['Having time to breathe', '息をつく時間があること'], ['Being honest', '正直でいること']] },
+  { en: 'What kind of people do you trust?', ja: 'どんな人を信頼する？', choices: [['People who keep promises', '約束を守る人'], ['People who listen', '話を聞く人'], ['People who can laugh at themselves', '自分を笑える人']] },
+  { en: 'What family tradition do you remember fondly?', ja: '楽しい思い出の家族の習慣は？', choices: [['Sunday dinner', '日曜の夕食'], ['Birthday stories', '誕生日の思い出話'], ['Holiday walks', '休日の散歩']] },
+  { en: 'What place from your past would you visit again?', ja: '過去にいた場所で、もう一度行きたい所は？', choices: [['My old neighborhood', '昔の近所'], ['A summer camp', 'サマーキャンプ'], ['A favorite beach', 'お気に入りの海辺']] },
+  { en: 'When did you first feel proud of yourself?', ja: '初めて自分を誇りに思ったのはいつ？', choices: [['When I finished something hard', '難しいことを終えたとき'], ['When I helped someone', '誰かを助けたとき'], ['When I tried again', 'もう一度挑戦したとき']] },
+  { en: 'What keeps you going on a difficult day?', ja: '大変な日に、何があなたを支える？', choices: [['A clear goal', '明確な目標'], ['A kind message', '優しいメッセージ'], ['A little humor', '少しのユーモア']] },
+  { en: 'What would you like your future self to remember?', ja: '未来の自分に覚えていてほしいことは？', choices: [['Stay curious', '好奇心を忘れないで'], ['Take care of people', '人を大切にして'], ['Enjoy the ride', '道のりを楽しんで']] },
+  { en: 'What dream feels exciting, even if it is scary?', ja: '怖くてもわくわくする夢は？', choices: [['Start a creative project', '創作を始める'], ['Move somewhere new', '新しい場所へ引っ越す'], ['Lead a team', 'チームを率いる']] },
+  { en: 'What is something you rarely say out loud?', ja: 'あまり口に出さないことは？', choices: [['I need help sometimes', 'ときどき助けが必要です'], ['I care more than I show', '見せる以上に大切に思っています'], ['I am still figuring it out', 'まだ模索中です']] },
+  { en: 'How do you handle a nervous moment?', ja: '緊張する場面にどう向き合う？', choices: [['Make a joke', '冗談を言う'], ['Take a slow breath', 'ゆっくり息をする'], ['Focus on one step', '一歩に集中する']] },
+  { en: 'What kind of support helps you most?', ja: 'どんな支えが一番助かる？', choices: [['A practical hand', '具体的に手伝うこと'], ['A quiet presence', '静かにそばにいること'], ['A hopeful reminder', '希望を思い出させること']] },
+  { en: 'What boundary helps you stay healthy?', ja: '健やかでいるための境界線は？', choices: [['Saying no sometimes', 'ときどき断ること'], ['Turning off my phone', 'スマホを切ること'], ['Keeping my own time', '自分の時間を守ること']] },
+  { en: 'What makes an apology feel sincere?', ja: '誠実な謝罪とは？', choices: [['Naming the mistake', '失敗を言葉にすること'], ['Changing the behavior', '行動を変えること'], ['Giving the other person time', '相手に時間を与えること']] },
+  { en: 'How do you show someone you care?', ja: '大切に思う人に、どう気持ちを示す？', choices: [['I check in', '様子を聞く'], ['I remember details', '細かいことを覚えている'], ['I make time', '時間を作る']] },
+  { en: 'What do you hope a close friend feels around you?', ja: '親しい友だちには、あなたといるとどう感じてほしい？', choices: [['Comfortable', '安心してほしい'], ['Free to be honest', '正直でいてほしい'], ['Ready to laugh', '笑う準備ができていてほしい']] },
+  { en: 'What is one promise worth keeping?', ja: '守る価値のある約束は？', choices: [['I will tell the truth', '真実を話す'], ['I will show up', '必ず駆けつける'], ['I will keep learning', '学び続ける']] },
+  { en: 'What would you like to give more of?', ja: 'もっと与えたいものは？', choices: [['My attention', '自分の注意を向けること'], ['My time', '自分の時間'], ['My courage', '自分の勇気']] },
+  { en: 'What would you like to receive more of?', ja: 'もっと受け取りたいものは？', choices: [['Honest feedback', '正直な意見'], ['Rest', '休息'], ['A little adventure', '小さな冒険']] },
+  { en: 'What kind of partnership feels strong?', ja: 'どんな関係が強いと思う？', choices: [['We can be ourselves', '自分らしくいられる'], ['We solve problems together', '一緒に問題を解決する'], ['We celebrate small wins', '小さな成功を喜ぶ']] },
+  { en: 'What would you say to someone who feels behind?', ja: '遅れていると感じる人に何と言う？', choices: [['Your pace is okay', 'あなたのペースで大丈夫'], ['You can start small', '小さく始められるよ'], ['You are not alone', '一人じゃないよ']] },
+  { en: 'What kind of adventure would you share with me?', ja: '僕とどんな冒険をしてみたい？', choices: [['A road trip', 'ドライブ旅行'], ['A new food tour', '新しい食べ物巡り'], ['A sunrise hike', '日の出のハイキング']] },
+  { en: 'What ordinary moment would you like to keep?', ja: 'どんな普通の瞬間を残したい？', choices: [['Laughing over leftovers', '残り物を食べながら笑うこと'], ['A quiet walk home', '静かに歩いて帰ること'], ['Sharing a good song', 'いい曲を共有すること']] },
+  { en: 'What are you ready to be braver about?', ja: '何について、もっと勇敢になりたい？', choices: [['My creative voice', '自分の創作の声'], ['My honest feelings', '正直な気持ち'], ['Asking for an opportunity', '機会を求めること']] },
+  { en: 'What do you want to protect in your life?', ja: '人生で何を守りたい？', choices: [['My peace', '自分の平穏'], ['My close people', '大切な人たち'], ['My sense of wonder', '驚きを感じる心']] },
+  { en: 'What makes you feel understood?', ja: '理解されていると感じるのはどんなとき？', choices: [['Someone remembers', '誰かが覚えていてくれるとき'], ['Someone listens without fixing', '解決せずに聞いてくれるとき'], ['Someone laughs with me', '一緒に笑ってくれるとき']] },
+  { en: 'What would a perfect last day of a trip include?', ja: '旅の最後の理想の一日は？', choices: [['One more local meal', '地元の料理をもう一度食べる'], ['A slow morning', 'ゆっくりした朝'], ['A funny photo', '面白い写真を撮る']] },
+  { en: 'What do you want this friendship to feel like?', ja: 'この友情をどんなものにしたい？', choices: [['Easy and honest', '気楽で正直なもの'], ['Adventurous and kind', '冒険的で優しいもの'], ['Steady and fun', '安定して楽しいもの']] },
+];
+
+const emmaBeats: Beat[] = [
+  { en: 'What kind of morning helps you feel grounded?', ja: 'どんな朝だと、落ち着いて一日を始められる？', choices: [['A quiet cup of tea', '静かにお茶を飲む朝'], ['A short walk', '短い散歩をする朝'], ['A written plan', '予定を書き出す朝']] },
+  { en: 'How do you usually greet someone you are glad to see?', ja: '会えてうれしい人に、いつもどうあいさつする？', choices: [['It’s good to see you', '会えてうれしいです'], ['How have you been?', '元気でしたか？'], ['I saved you a seat', '席を取っておいたよ']] },
+  { en: 'What detail do you notice first in a new place?', ja: '初めての場所で、最初に何に気づく？', choices: [['The light', '光の入り方'], ['The sounds', '音'], ['The way people move', '人の動き方']] },
+  { en: 'When a plan changes, what helps you adjust?', ja: '予定が変わったとき、何があると対応しやすい？', choices: [['A clear explanation', '明確な説明'], ['A little time', '少し時間があること'], ['A kind sense of humor', '優しいユーモア']] },
+  { en: 'Where do you go when you need to think?', ja: '考えたいとき、どこへ行く？', choices: [['A library', '図書館'], ['A lakeside path', '湖のそばの道'], ['A familiar café', '行きつけのカフェ']] },
+  { en: 'What do you keep close during a busy day?', ja: '忙しい日に、そばに置いておくものは？', choices: [['A notebook', 'ノート'], ['Lip balm', 'リップクリーム'], ['A small snack', '小さなおやつ']] },
+  { en: 'Which compliment stays with you?', ja: 'どんなほめ言葉が心に残る？', choices: [['You make people feel safe', 'あなたは人を安心させる'], ['You notice what matters', '大切なことによく気づく'], ['You are quietly strong', 'あなたは静かに強い']] },
+  { en: 'If we had one peaceful hour, what would you choose?', ja: '穏やかな1時間があったら、何をする？', choices: [['Read together', '一緒に読書する'], ['Walk by the water', '水辺を歩く'], ['Share a warm drink', '温かい飲み物を分け合う']] },
+  { en: 'What is your first thought after waking up?', ja: '目覚めて最初に考えることは？', choices: [['What needs doing', '何をすべきか'], ['One thing to look forward to', '楽しみなことを一つ'], ['I need five more minutes', 'あと5分必要']] },
+  { en: 'What breakfast makes a day feel cared for?', ja: 'どんな朝食だと、大切にされていると感じる？', choices: [['Warm oatmeal', '温かいオートミール'], ['Fresh toast', '焼きたてのトースト'], ['A family recipe', '家族のレシピ']] },
+  { en: 'What is your favorite way to move around Chicago?', ja: 'シカゴでは、どう移動するのが好き？', choices: [['The train', '電車'], ['Walking downtown', '街中を歩くこと'], ['A bus with a good view', '景色のよいバス']] },
+  { en: 'What sound makes a commute better?', ja: '通勤・通学をよくする音は？', choices: [['A thoughtful podcast', '考えさせられるポッドキャスト'], ['Jazz in the background', '静かなジャズ'], ['A friend’s voice message', '友だちの音声メッセージ']] },
+  { en: 'How do you decide where to eat?', ja: '食事をする店はどう決める？', choices: [['Read the menu carefully', 'メニューをよく読む'], ['Ask someone I trust', '信頼する人に聞く'], ['Choose the welcoming place', '雰囲気のよい店を選ぶ']] },
+  { en: 'What meal always feels comforting?', ja: 'いつでも安心できる料理は？', choices: [['Soup', 'スープ'], ['Dumplings', '餃子'], ['A simple rice bowl', '簡単などんぶり']] },
+  { en: 'How do you recover after giving too much energy?', ja: '頑張りすぎたあと、どう回復する？', choices: [['Take a quiet evening', '静かな夜を過ごす'], ['Write down my thoughts', '考えを書き出す'], ['Talk with someone close', '親しい人と話す']] },
+  { en: 'Which describes your natural rhythm?', ja: '自然な生活リズムはどれ？', choices: [['Early and steady', '早起きで安定している'], ['Late and reflective', '遅めで考え深い'], ['Flexible but intentional', '柔軟だが意識的']] },
+  { en: 'What weather brings out your best mood?', ja: 'どんな天気だと一番いい気分になる？', choices: [['Crisp autumn air', '澄んだ秋の空気'], ['Soft spring rain', '静かな春の雨'], ['Bright winter sun', '明るい冬の日差し']] },
+  { en: 'What does an ideal weekend balance?', ja: '理想の週末は何のバランスがいい？', choices: [['Rest and errands', '休息と用事'], ['Friends and solitude', '友だちと一人の時間'], ['Culture and nature', '文化と自然']] },
+  { en: 'What makes a room feel welcoming?', ja: '部屋を居心地よくするものは？', choices: [['Soft lighting', '柔らかい照明'], ['Books within reach', '手の届く本'], ['Something homemade', '手作りのもの']] },
+  { en: 'Which skill would make your life gentler?', ja: 'どんなスキルがあれば生活が少し楽になる？', choices: [['Set better boundaries', '境界線を上手に作る'], ['Cook for a crowd', '大勢の料理を作る'], ['Speak up sooner', 'もっと早く意見を言う']] },
+  { en: 'What did you collect or treasure as a child?', ja: '子どものころ、何を集めたり大切にしたりした？', choices: [['Pretty stones', 'きれいな石'], ['Notes from friends', '友だちからのメモ'], ['Little facts', '小さな豆知識']] },
+  { en: 'Who taught you to pay attention?', ja: '注意深く見ることを教えてくれた人は？', choices: [['A grandparent', '祖父母'], ['A patient teacher', '辛抱強い先生'], ['A curious friend', '好奇心旺盛な友だち']] },
+  { en: 'What lesson did a difficult season leave you?', ja: '大変な時期から、どんなことを学んだ？', choices: [['Rest is productive', '休むことも前進だ'], ['Asking is not weakness', '頼ることは弱さではない'], ['Small steps count', '小さな一歩にも意味がある']] },
+  { en: 'What does a meaningful life include?', ja: '意味のある人生には何が含まれる？', choices: [['Useful work', '人の役に立つ仕事'], ['Deep relationships', '深い人間関係'], ['Room for wonder', '驚きを感じる余白']] },
+  { en: 'What kind of honesty feels kind?', ja: 'どんな正直さが優しいと思う？', choices: [['Clear but gentle words', '明確で優しい言葉'], ['Honesty at the right time', '適切なタイミングの正直さ'], ['Listening before speaking', '話す前に聞くこと']] },
+  { en: 'Which family ritual still warms you?', ja: '今も心が温かくなる家族の習慣は？', choices: [['Sunday phone calls', '日曜の電話'], ['Making soup together', '一緒にスープを作ること'], ['Sharing a story at night', '夜に話を共有すること']] },
+  { en: 'What past place still shapes you?', ja: '今の自分に影響している過去の場所は？', choices: [['My first apartment', '初めてのアパート'], ['A neighborhood bookstore', '近所の本屋'], ['A school hallway', '学校の廊下']] },
+  { en: 'When did you realize you could handle more than you thought?', ja: '思った以上に頑張れると気づいたのはいつ？', choices: [['During a hard move', '大変な引っ越しのとき'], ['After helping my family', '家族を助けたあと'], ['When I kept a promise', '約束を守ったとき']] },
+  { en: 'What helps you keep perspective?', ja: '広い視野を保つために何をする？', choices: [['Write a short list', '短いリストを書く'], ['Call someone wise', '賢い人に電話する'], ['Look at the sky', '空を見る']] },
+  { en: 'What hope are you carrying quietly?', ja: '静かに抱いている希望は？', choices: [['To make useful art', '役に立つ作品を作ること'], ['To build a calm home', '穏やかな家を作ること'], ['To be brave with love', '愛に対して勇敢になること']] },
+  { en: 'What dream would you pursue with more confidence?', ja: 'もっと自信があれば、どんな夢を追う？', choices: [['Publish my writing', '文章を発表する'], ['Change my work', '仕事を変える'], ['Travel alone', '一人旅をする']] },
+  { en: 'What feeling is hardest for you to name?', ja: '名前をつけるのが難しい感情は？', choices: [['Disappointment', '失望'], ['Longing', '憧れ・恋しさ'], ['Pride', '誇り']] },
+  { en: 'What do you do when uncertainty gets loud?', ja: '不確かさが大きく感じられるとき、どうする？', choices: [['Focus on today', '今日に集中する'], ['Make a careful plan', '慎重に計画する'], ['Share the fear', '不安を共有する']] },
+  { en: 'What support feels respectful to you?', ja: '尊重されていると感じる支えは？', choices: [['Ask before helping', '助ける前に聞くこと'], ['Offer choices', '選択肢をくれること'], ['Stay without pressure', 'プレッシャーなくそばにいること']] },
+  { en: 'What boundary protects your attention?', ja: '集中力を守る境界線は？', choices: [['A no-meeting hour', '会議を入れない1時間'], ['A quiet phone', '通知を切ったスマホ'], ['One task at a time', '一度に一つの仕事']] },
+  { en: 'What makes forgiveness possible?', ja: '許すことを可能にするものは？', choices: [['A sincere apology', '心からの謝罪'], ['Consistent change', '継続した変化'], ['Enough time', '十分な時間']] },
+  { en: 'How do you show care when words are not enough?', ja: '言葉だけでは足りないとき、どう気遣う？', choices: [['Bring something useful', '役立つものを持っていく'], ['Remember a hard date', 'つらい日を覚えておく'], ['Sit quietly nearby', '静かに近くに座る']] },
+  { en: 'What should a close person feel with you?', ja: '親しい人には、あなたといるとどう感じてほしい？', choices: [['Seen', 'ちゃんと見てもらえている'], ['Respected', '尊重されている'], ['At ease', '気楽である']] },
+  { en: 'What promise would you make to a friend?', ja: '友だちにどんな約束をする？', choices: [['I will listen carefully', 'よく話を聞く'], ['I will be honest kindly', '優しく正直でいる'], ['I will keep showing up', 'これからもそばにいる']] },
+  { en: 'What do you want to offer more freely?', ja: 'もっと自然に与えたいものは？', choices: [['Encouragement', '励まし'], ['Attention', '注意を向けること'], ['Patience', '忍耐']] },
+  { en: 'What would you accept more easily?', ja: 'もっと素直に受け入れたいものは？', choices: [['A compliment', 'ほめ言葉'], ['A helping hand', '助けの手'], ['A slower pace', 'ゆっくりしたペース']] },
+  { en: 'What makes a relationship resilient?', ja: '関係を強く保つものは？', choices: [['Repair after conflict', '衝突のあとに修復すること'], ['Curiosity about each other', '互いへの好奇心'], ['Room to change', '変わる余地']] },
+  { en: 'What would you tell someone who feels lost?', ja: '迷っている人に何と伝える？', choices: [['You can pause', '立ち止まっていいよ'], ['One honest step is enough', '正直な一歩で十分だよ'], ['Let someone walk with you', '誰かと一緒に歩いていいよ']] },
+  { en: 'What gentle Chicago day would you share with me?', ja: '私とどんな穏やかなシカゴの日を過ごしたい？', choices: [['A museum afternoon', '午後に美術館へ行く'], ['A lakefront walk', '湖岸を歩く'], ['A neighborhood café', '近所のカフェへ行く']] },
+  { en: 'What quiet ritual could become ours?', ja: '私たちの静かな習慣にできそうなことは？', choices: [['Tea after a long day', '長い一日の後のお茶'], ['A weekly check-in', '毎週近況を話すこと'], ['Sharing one good detail', 'よかったことを一つ共有する']] },
+  { en: 'Where could you let yourself be more seen?', ja: 'どんな場面で、もっと自分を見せられそう？', choices: [['In my creative work', '創作の中で'], ['With trusted people', '信頼できる人の前で'], ['In a new beginning', '新しい始まりで']] },
+  { en: 'What do you want to protect between us?', ja: '私たちの間で何を守りたい？', choices: [['Respect', '尊重'], ['Warmth', '温かさ'], ['Honest curiosity', '正直な好奇心']] },
+  { en: 'What tells you that you are understood?', ja: '理解されていると分かるのはどんなとき？', choices: [['A remembered detail', '覚えていてくれた細部'], ['A patient pause', '辛抱強い間'], ['A thoughtful follow-up', '思いやりのある質問']] },
+  { en: 'What would make the end of a good trip feel complete?', ja: '楽しい旅の終わりを、何が完成させる？', choices: [['A thank-you note', '感謝のメモ'], ['One final shared meal', '最後に一緒に食事すること'], ['A plan to meet again', 'また会う予定']] },
+  { en: 'What do you hope this connection becomes?', ja: 'このつながりが、どんなものになればいい？', choices: [['A safe place', '安心できる場所'], ['A thoughtful friendship', '思いやりのある友情'], ['A source of courage', '勇気をくれるもの']] },
+];
+
+export const conversationGroup1: ConversationGroup = {
+  jack: makeRounds('jack', jackBeats),
+  emma: makeRounds('emma', emmaBeats),
+};
+
+
+
+
+
+

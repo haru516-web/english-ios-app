@@ -7,22 +7,22 @@
 export type Gradient = readonly [string, string, ...string[]];
 
 export const colors = {
-  background: '#05070B',
-  surface: '#0B0F16',
-  surfaceRaised: '#111722',
-  glass: 'rgba(26, 31, 43, 0.72)',
-  glassStrong: 'rgba(31, 38, 54, 0.88)',
-  glassBorder: 'rgba(255, 255, 255, 0.12)',
-  glassHighlight: 'rgba(255, 255, 255, 0.07)',
-  textPrimary: '#F5F7FB',
-  textSecondary: '#A7AFBD',
-  textMuted: '#697181',
+  background: '#050505',
+  surface: '#0C1022',
+  surfaceRaised: '#141A31',
+  glass: 'rgba(15, 20, 39, 0.58)',
+  glassStrong: 'rgba(20, 25, 49, 0.76)',
+  glassBorder: 'rgba(177, 190, 255, 0.30)',
+  glassHighlight: 'rgba(224, 207, 255, 0.16)',
+  textPrimary: '#EEF0FF',
+  textSecondary: '#B1B7D2',
+  textMuted: '#777F9E',
   accent: '#7771E8',
   accentBlue: '#6E8CFF',
   accentSoft: 'rgba(119, 113, 232, 0.22)',
   success: '#70D5A4',
-  divider: 'rgba(255, 255, 255, 0.08)',
-  white: '#FFFFFF',
+  divider: 'rgba(151, 167, 232, 0.16)',
+  white: '#F2EEFF',
   black: '#000000',
 } as const;
 
@@ -56,8 +56,8 @@ export const typography = {
 export const shadows = {
   glass: {
     shadowColor: colors.accentBlue,
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
+    shadowOpacity: 0.30,
+    shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
   },
@@ -70,7 +70,19 @@ export const shadows = {
   },
 } as const;
 
-export type CharacterId = 'jack' | 'emma' | 'oliver' | 'noah' | 'alex' | 'liam';
+export type CharacterId =
+  | 'jack'
+  | 'emma'
+  | 'oliver'
+  | 'noah'
+  | 'alex'
+  | 'liam'
+  | 'luca'
+  | 'miles'
+  | 'finn'
+  | 'lena'
+  | 'mara'
+  | 'camille';
 export type ChatId = `chat-${CharacterId}`;
 export type MessageId = string;
 export type ReplyChoiceId = string;
@@ -144,6 +156,12 @@ export const characters: readonly Character[] = [
   { id: 'noah', name: 'Noah', location: 'Los Angeles', age: 21, bio: 'College student. Loves memes and late nights.', initials: 'N', gradient: ['#5F7890', '#B07952'], tone: 'Slang-heavy casual English', isFree: false, isConnected: false },
   { id: 'alex', name: 'Alex', location: 'Toronto', age: 25, bio: 'Works hard, plays hard. Into music and coffee.', initials: 'A', gradient: ['#4B657B', '#6B4E4E'], tone: 'Natural everyday English', isFree: false, isConnected: false },
   { id: 'liam', name: 'Liam', location: 'Dublin', age: 23, bio: 'Easygoing and honest. Always down to talk.', initials: 'L', gradient: ['#6C806D', '#795A4B'], tone: 'Friendly Irish English', isFree: false, isConnected: false },
+  { id: 'luca', name: 'Luca', location: 'Southampton', age: 23, bio: 'A roaming sketch artist who treats every day like an adventure.', initials: 'L', gradient: ['#8E684E', '#365B70'], tone: 'Warm spontaneous storytelling English', isFree: false, isConnected: false },
+  { id: 'miles', name: 'Miles', location: 'Boston', age: 34, bio: 'An archaeology professor who is rarely far from a dangerous mystery.', initials: 'M', gradient: ['#80613E', '#343E4D'], tone: 'Witty adventurous academic English', isFree: false, isConnected: false },
+  { id: 'finn', name: 'Finn', location: 'Savannah', age: 29, bio: 'Plain-spoken, deeply sincere, and full of surprising life stories.', initials: 'F', gradient: ['#657B66', '#8A684B'], tone: 'Simple sincere Southern American English', isFree: false, isConnected: false },
+  { id: 'lena', name: 'Lena', location: 'Los Angeles', age: 24, bio: 'A fashion-loving law student whose optimism is sharper than people expect.', initials: 'L', gradient: ['#B06988', '#69528A'], tone: 'Upbeat confident Californian English', isFree: false, isConnected: false },
+  { id: 'mara', name: 'Mara', location: 'New York', age: 45, bio: 'A legendary editor with exacting standards and immaculate composure.', initials: 'M', gradient: ['#626272', '#3E4354'], tone: 'Precise demanding professional English', isFree: false, isConnected: false },
+  { id: 'camille', name: 'Camille', location: 'Paris', age: 25, bio: 'A quiet dreamer who notices small wonders and gently changes lives.', initials: 'C', gradient: ['#9A6B64', '#4F6872'], tone: 'Gentle imaginative French-influenced English', isFree: false, isConnected: false },
 ] as const;
 
 export const chatSummaries: readonly ChatSummary[] = [

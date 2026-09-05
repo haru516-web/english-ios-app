@@ -22,6 +22,7 @@ import {
 
 import { getPetCharacter, isPetId, PET_CHARACTERS, type PetCharacter, type PetId } from './petCatalog';
 import { lookupPetQuery, sanitizePetInput, type PetDictionaryResult } from './petDictionary';
+import { GlassSurfaceLight } from './ui';
 
 const PET_STORAGE_KEY = 'between.pet-widget.v1';
 const DEFAULT_PET_ID: PetId = 'babumoby';
@@ -190,6 +191,7 @@ function PetPickerModal({
       <View style={styles.modalRoot}>
         <Pressable accessibilityLabel="ペット選択を閉じる" accessibilityRole="button" onPress={onClose} style={styles.modalBackdrop} />
         <View accessibilityViewIsModal accessibilityLabel="ペットを選ぶ" style={styles.pickerCard}>
+          <GlassSurfaceLight />
           <View style={styles.pickerHeader}>
             <View style={styles.pickerHeaderCopy}>
               <Text style={styles.pickerEyebrow}>mobby collection</Text>
@@ -218,7 +220,7 @@ function PetPickerModal({
                   onPress={() => setDraftId(pet.id)}
                   style={({ pressed }) => [styles.pickerOption, pressed && styles.pickerOptionPressed]}
                 >
-                  <View style={[styles.pickerImageWrap, selected && { borderColor: pet.accent }]}>
+                  <View style={[styles.pickerImageWrap, selected && { borderColor: pet.accent, shadowColor: pet.accent }]}>
                     <Image source={pet.image} resizeMode="contain" style={styles.pickerImage} />
                     {selected ? <View style={[styles.pickerCheck, { backgroundColor: pet.accent }]}><Text style={styles.pickerCheckText}>✓</Text></View> : null}
                   </View>
@@ -572,7 +574,8 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
   return (
     <View pointerEvents="box-none" onLayout={handleLayout} style={styles.overlay}>
       {askOpen && layout.width > 0 ? (
-        <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop, borderColor: pet.accent }]}>
+        <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop, borderColor: pet.accent, shadowColor: pet.accent }]}>
+          <GlassSurfaceLight compact />
           <View style={styles.askHeader}>
             <View style={styles.askHeaderCopy}>
               <Text style={styles.askTitle}>単語や熟語を聞いてみる</Text>
@@ -604,7 +607,7 @@ export function PetWidget({ avoidBottom = 126 }: { avoidBottom?: number }) {
               accessibilityLabel="英単語や熟語を入力"
             />
             <Pressable accessibilityRole="button" accessibilityLabel="単語や熟語の意味を調べる" disabled={!word || lookupLoading} onPress={handleLookup} style={({ pressed }) => [styles.lookupButton, (!word || lookupLoading) && styles.lookupButtonDisabled, pressed && styles.pressed]}>
-              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+              <Ionicons name="arrow-up" size={18} color="#F4EEFF" />
             </Pressable>
           </View>
           {lookupLoading ? <View style={styles.lookupStatus}><ActivityIndicator size="small" color="#D58A9B" /><Text style={styles.lookupStatusText}>辞書を調べてるよ…</Text></View> : null}
@@ -702,37 +705,40 @@ const styles = StyleSheet.create({
     zIndex: 70,
     padding: 14,
     borderRadius: 22,
-    borderWidth: 1,
-    backgroundColor: 'rgba(17, 20, 30, 0.97)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.38,
-    shadowRadius: 22,
+    borderWidth: 2,
+    borderTopColor: 'rgba(246,240,246,0.68)',
+    borderLeftColor: 'rgba(205,202,218,0.38)',
+    backgroundColor: 'rgba(12, 17, 34, 0.72)',
+    shadowColor: '#8F82FF',
+    shadowOpacity: 0.34,
+    shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
     elevation: 18,
+    overflow: 'hidden',
   },
   askHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 },
   askHeaderCopy: { flex: 1, paddingTop: 2 },
-  askTitle: { color: '#F5F7FB', fontSize: 17, fontWeight: '800' },
+  askTitle: { color: '#EEF0FF', fontSize: 17, fontWeight: '800' },
   askPetButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   askPetImage: { width: 42, height: 42 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wordInput: { flex: 1, height: 44, minWidth: 0, paddingHorizontal: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(255,255,255,0.075)', color: '#F5F7FB', fontSize: 15 },
+  wordInput: { flex: 1, height: 44, minWidth: 0, paddingHorizontal: 13, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(179,195,255,0.30)', backgroundColor: 'rgba(32,40,72,0.52)', color: '#EEF0FF', fontSize: 15 },
   lookupButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#D58A9B' },
   lookupButtonDisabled: { opacity: 0.38 },
   lookupStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 },
   lookupStatusText: { color: '#A9A5FF', fontSize: 11 },
   validationMessage: { color: '#F0B2C0', fontSize: 11, marginTop: 7 },
-  answerBubble: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 15, borderWidth: 1 },
+  answerBubble: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 15, borderWidth: 1.75, borderTopColor: 'rgba(244,238,244,0.56)' },
   answerKind: { color: '#B9B6FF', fontSize: 9, fontWeight: '900', letterSpacing: 0.7, marginBottom: 3 },
   answerWord: { color: '#F7DDE3', fontSize: 12, fontWeight: '900', letterSpacing: 0.4 },
-  answerText: { color: '#F5F7FB', fontSize: 13, lineHeight: 19, marginTop: 3 },
+  answerText: { color: '#EEF0FF', fontSize: 13, lineHeight: 19, marginTop: 3 },
   modalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 24 },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
-  pickerCard: { width: '100%', maxWidth: 410, maxHeight: '88%', minHeight: 420, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(242,200,211,0.4)', backgroundColor: 'rgba(17,20,30,0.985)', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: 0.46, shadowRadius: 26, shadowOffset: { width: 0, height: 16 }, elevation: 20 },
-  pickerHeader: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 20, paddingBottom: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.09)' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,5,15,0.68)' },
+  pickerCard: { width: '100%', maxWidth: 410, maxHeight: '88%', minHeight: 420, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(207,185,255,0.50)', borderTopColor: 'rgba(248,241,247,0.70)', borderLeftColor: 'rgba(208,201,218,0.38)', backgroundColor: 'rgba(13,17,35,0.84)', overflow: 'hidden', shadowColor: '#9A76FF', shadowOpacity: 0.38, shadowRadius: 34, shadowOffset: { width: 0, height: 16 }, elevation: 20 },
+  pickerHeader: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 20, paddingBottom: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(169,184,245,0.18)' },
   pickerHeaderCopy: { flex: 1 },
   pickerEyebrow: { color: '#D58A9B', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
-  pickerTitle: { color: '#F5F7FB', fontSize: 22, fontWeight: '900', marginTop: 3 },
+  pickerTitle: { color: '#EEF0FF', fontSize: 22, fontWeight: '900', marginTop: 3 },
   pickerSubtitle: { color: '#8C93A3', fontSize: 11, marginTop: 4 },
   closeButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', marginTop: -4 },
   closeButtonText: { color: '#D9B5BE', fontSize: 30, lineHeight: 32, fontWeight: '300' },
@@ -740,15 +746,15 @@ const styles = StyleSheet.create({
   pickerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 13, paddingHorizontal: 18, paddingTop: 17, paddingBottom: 18 },
   pickerOption: { width: '31.5%', alignItems: 'center', paddingVertical: 3 },
   pickerOptionPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
-  pickerImageWrap: { width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.025)' },
+  pickerImageWrap: { width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(105,119,191,0.10)' },
   pickerImage: { width: '91%', height: '91%' },
   pickerCheck: { position: 'absolute', top: 0, right: 0, width: 23, height: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   pickerCheckText: { color: '#241A25', fontSize: 14, lineHeight: 16, fontWeight: '900' },
   pickerName: { maxWidth: '100%', color: '#8E95A6', fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center', marginTop: 4 },
   pickerNameSelected: { color: '#F3D5DC' },
   pickerCatchphrase: { maxWidth: '100%', color: '#626A7B', fontSize: 9, lineHeight: 13, textAlign: 'center' },
-  pickerFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.09)' },
-  pickerCancel: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  pickerFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(169,184,245,0.18)' },
+  pickerCancel: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(185,198,255,0.30)', backgroundColor: 'rgba(48,57,96,0.30)' },
   pickerConfirm: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: '#D58A9B' },
   pickerCancelText: { color: '#BFC5D2', fontSize: 13, fontWeight: '700' },
   pickerConfirmText: { color: '#281B25', fontSize: 13, fontWeight: '900' },

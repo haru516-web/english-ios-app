@@ -25,20 +25,34 @@ export type GlassPanelProps = {
   testID?: string;
 };
 
+export function GlassSurfaceLight({ compact = false }: { compact?: boolean }) {
+  return <>
+    <LinearGradient pointerEvents="none" colors={['rgba(255,252,245,0.17)', 'rgba(240,239,234,0.045)', 'rgba(230,228,221,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.82, y: 0.88 }} style={StyleSheet.absoluteFill} />
+    <LinearGradient pointerEvents="none" colors={['rgba(255,253,247,0.16)', 'rgba(255,252,245,0.045)', 'rgba(255,252,245,0)']} start={{ x: 0, y: 0.4 }} end={{ x: 1, y: 0.6 }} style={[styles.glassSweep, compact && styles.glassSweepCompact]} />
+    <View pointerEvents="none" style={[styles.glassSpecular, compact && styles.glassSpecularCompact]} />
+  </>;
+}
 export function GlassPanel({
   children,
   style,
   intensity = 30,
   tint = 'dark',
-  borderColor = 'rgba(255,255,255,0.12)',
+  borderColor = 'rgba(177,190,255,0.30)',
   testID,
 }: GlassPanelProps) {
   const panelStyle = [styles.glassPanel, { borderColor }, style];
+  const panelContent = <>
+    <GlassSurfaceLight />
+
+    <View pointerEvents="none" style={styles.glassInnerRim} />
+    <View pointerEvents="none" style={styles.glassTopEdge} />
+    {children}
+  </>;
   return Platform.OS === 'web' ? (
-    <View testID={testID} style={panelStyle}>{children}</View>
+    <View testID={testID} style={panelStyle}>{panelContent}</View>
   ) : (
     <BlurView testID={testID} intensity={intensity} tint={tint} style={panelStyle}>
-      {children}
+      {panelContent}
     </BlurView>
   );
 }
@@ -154,6 +168,8 @@ export type ChatRowProps = {
 export function ChatRow({ name, preview, time, unread, online, onPress, avatar, style }: ChatRowProps) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open chat with ${name}`} style={({ pressed }) => [styles.chatRow, pressed && styles.pressed, style]}>
+      <GlassSurfaceLight compact />
+      <View pointerEvents="none" style={styles.cardInnerRim} />
       {avatar || <Avatar name={name} size={48} />}
       <View style={styles.chatCopy}>
         <View style={styles.chatHeader}><Text numberOfLines={1} style={styles.chatName}>{name}</Text><Text style={styles.chatTime}>{time}</Text></View>
@@ -208,23 +224,30 @@ export function ProfileRow({ title, subtitle, value, icon, onPress, destructive,
 }
 
 const styles = StyleSheet.create({
-  glassPanel: { backgroundColor: 'rgba(20,24,34,0.78)', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, overflow: 'hidden' },
-  avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  avatarText: { color: '#F7F8FC', fontWeight: '700' },
+  glassSweep: { position: 'absolute', width: 230, height: 92, top: -38, left: -42, borderRadius: 60, transform: [{ rotate: '-9deg' }] },
+  glassSweepCompact: { width: 175, height: 72, top: -32, left: -34 },
+  glassSpecular: { position: 'absolute', top: 4, left: 22, width: 66, height: 2, borderRadius: 2, backgroundColor: 'rgba(255,252,245,0.48)', shadowColor: '#FFF8EC', shadowOpacity: 0.42, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } },
+  glassSpecularCompact: { left: 18, width: 48 },
+  glassPanel: { backgroundColor: 'rgba(12,17,35,0.58)', borderWidth: 2, borderTopColor: 'rgba(238,235,244,0.68)', borderLeftColor: 'rgba(211,211,225,0.48)', borderRightColor: 'rgba(145,150,178,0.30)', borderBottomColor: 'rgba(84,89,116,0.26)', borderRadius: 22, overflow: 'hidden', shadowColor: '#8F82FF', shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, elevation: 10 },
+  glassInnerRim: { ...StyleSheet.absoluteFillObject, margin: 2, borderWidth: 1, borderRadius: 19, borderColor: 'rgba(222,220,235,0.14)' },
+  glassTopEdge: { position: 'absolute', top: 2, left: 14, right: 14, height: 3, borderRadius: 2, backgroundColor: 'rgba(246,242,248,0.44)' },
+  avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(203,211,255,0.38)' },
+  avatarText: { color: '#F0EEFF', fontWeight: '700' },
   iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
-  iconButtonGlass: { backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.14)' },
+  iconButtonGlass: { backgroundColor: 'rgba(86,98,173,0.20)', borderWidth: 1, borderColor: 'rgba(186,199,255,0.34)', shadowColor: '#786DFF', shadowOpacity: 0.26, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 7 },
   iconButtonAccent: { backgroundColor: '#6963D9' },
-  iconFallback: { color: '#F5F7FB', fontSize: 22 },
-  searchField: { height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.08)' },
+  iconFallback: { color: '#EEE9FF', fontSize: 22 },
+  searchField: { height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, borderRadius: 14, backgroundColor: 'rgba(24,31,58,0.48)', borderWidth: 1, borderColor: 'rgba(157,177,255,0.24)', shadowColor: '#6E8CFF', shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 6 } },
   searchIcon: { color: '#B9C0CC', fontSize: 25, lineHeight: 25, marginRight: 7 },
-  searchInput: { flex: 1, color: '#F5F7FB', fontSize: 16, paddingVertical: 0 },
+  searchInput: { flex: 1, color: '#EEF0FF', fontSize: 16, paddingVertical: 0 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  sectionTitle: { color: '#F5F7FB', fontSize: 16, fontWeight: '700' },
+  sectionTitle: { color: '#EEF0FF', fontSize: 16, fontWeight: '700' },
   sectionAction: { color: '#938EFF', fontSize: 14, fontWeight: '600' },
-  chatRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: 'rgba(18,22,31,0.72)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.09)' },
+  chatRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 18, backgroundColor: 'rgba(13,19,38,0.44)', borderWidth: 2, borderColor: 'rgba(166,183,255,0.32)', borderTopColor: 'rgba(240,237,245,0.66)', borderLeftColor: 'rgba(211,211,225,0.46)', borderRightColor: 'rgba(136,144,176,0.28)', borderBottomColor: 'rgba(75,82,111,0.26)', shadowColor: '#786DFF', shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 9 }, elevation: 7, overflow: 'hidden' },
+  cardInnerRim: { ...StyleSheet.absoluteFillObject, margin: 2, borderWidth: 1, borderRadius: 15, borderColor: 'rgba(224,222,236,0.13)' },
   chatCopy: { flex: 1, marginLeft: 12, minWidth: 0 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  chatName: { flex: 1, color: '#F5F7FB', fontSize: 16, fontWeight: '700' },
+  chatName: { flex: 1, color: '#EEF0FF', fontSize: 16, fontWeight: '700' },
   chatTime: { color: '#8D95A4', fontSize: 12 },
   chatPreview: { color: '#AAB2C0', fontSize: 14, lineHeight: 20, marginTop: 3 },
   statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#7771E8', marginLeft: 9 },
@@ -232,21 +255,21 @@ const styles = StyleSheet.create({
   messageLine: { alignItems: 'flex-start', marginVertical: 4 },
   mineLine: { alignItems: 'flex-end' },
   messageBubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
-  theirBubble: { backgroundColor: 'rgba(33,38,49,0.82)', borderColor: 'rgba(255,255,255,0.08)', borderBottomLeftRadius: 5 },
-  mineBubble: { backgroundColor: 'rgba(91,85,171,0.55)', borderColor: 'rgba(168,164,255,0.28)', borderBottomRightRadius: 5 },
-  messageText: { color: '#F1F3F8', fontSize: 16, lineHeight: 22 },
-  mineMessageText: { color: '#FFFFFF' },
+  theirBubble: { backgroundColor: 'rgba(24,31,55,0.62)', borderColor: 'rgba(169,187,255,0.25)', borderBottomLeftRadius: 5 },
+  mineBubble: { backgroundColor: 'rgba(96,84,190,0.52)', borderColor: 'rgba(205,187,255,0.40)', borderBottomRightRadius: 5 },
+  messageText: { color: '#ECEEFF', fontSize: 16, lineHeight: 22 },
+  mineMessageText: { color: '#F4EEFF' },
   translationText: { color: '#B8C0CE', fontSize: 14, lineHeight: 19, marginTop: 5 },
   messageTime: { alignSelf: 'flex-end', color: '#8D95A4', fontSize: 10, marginTop: 5 },
   mineMessageTime: { color: '#D6D5F2' },
-  replyChoice: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 15, marginVertical: 4, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)' },
+  replyChoice: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 15, marginVertical: 4, borderRadius: 14, backgroundColor: 'rgba(30,37,67,0.48)', borderWidth: 1.75, borderColor: 'rgba(159,178,255,0.34)', borderTopColor: 'rgba(226,224,238,0.42)' },
   replyChoiceSelected: { backgroundColor: 'rgba(109,103,225,0.25)', borderColor: '#7771E8' },
-  replyText: { color: '#F1F3F8', fontSize: 15 },
-  profileRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  replyText: { color: '#ECEEFF', fontSize: 15 },
+  profileRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(155,174,239,0.16)' },
   profileIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   profileIconText: { color: '#B9C0CC', fontSize: 23 },
   profileCopy: { flex: 1 },
-  profileTitle: { color: '#F5F7FB', fontSize: 15 },
+  profileTitle: { color: '#EEF0FF', fontSize: 15 },
   profileSubtitle: { color: '#8D95A4', fontSize: 12, marginTop: 2 },
   profileValue: { color: '#9CA4B2', fontSize: 14 },
   destructive: { color: '#FF8088' },
