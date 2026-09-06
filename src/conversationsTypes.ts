@@ -13,6 +13,8 @@ export type ConversationRound = {
   promptEnglish: string;
   promptJapanese: string;
   choices: readonly ConversationChoice[];
+  /** New model-driven scripts bypass the legacy shared practical overlay. */
+  isCustom?: boolean;
 };
 
 export type ConversationGroup = Partial<Record<CharacterId, readonly ConversationRound[]>>;

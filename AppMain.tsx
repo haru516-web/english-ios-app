@@ -4,6 +4,7 @@ import {
   Easing,
   KeyboardAvoidingView,
   Image,
+  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -78,6 +79,7 @@ function ScreenBackground({
   navigationPetPickerOpen = false,
   onNavigationPetPickerClose,
   hideFloatingPet = false,
+  selectedPetId,
   onSelectedPetChange,
 }: {
   children: React.ReactNode;
@@ -86,6 +88,7 @@ function ScreenBackground({
   navigationPetPickerOpen?: boolean;
   onNavigationPetPickerClose?: () => void;
   hideFloatingPet?: boolean;
+  selectedPetId?: PetId;
   onSelectedPetChange?: (id: PetId) => void;
 }) {
   const { width } = useWindowDimensions();
@@ -101,6 +104,7 @@ function ScreenBackground({
           navigationPickerOpen={navigationPetPickerOpen}
           onNavigationPickerClose={onNavigationPetPickerClose}
           hideFloatingPet={hideFloatingPet}
+          selectedPetId={selectedPetId}
           onSelectedPetChange={onSelectedPetChange}
         />
       </View>
@@ -201,7 +205,7 @@ function ChatsScreen({
 function FriendCard({ character, onPress }: { character: Character; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open ${character.name}'s profile`} style={({ pressed }) => [styles.friendCard, pressed && styles.pressed]}>
-      <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={58} />
+      <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={66} />
       <View style={styles.friendCardNameRow}>
         <Text style={styles.friendCardName}>{character.name}</Text>
         <View style={styles.friendOnlineDot} />
@@ -224,23 +228,105 @@ function AllFriendRow({ character, onPress }: { character: Character; onPress: (
   );
 }
 
+function FriendProfileModal({
+  character,
+  isConnected,
+  onClose,
+  onOpenChat,
+  onMeet,
+}: {
+  character: Character | null;
+  isConnected: boolean;
+  onClose: () => void;
+  onOpenChat: () => void;
+  onMeet: () => void;
+}) {
+  if (!character) return null;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.profileModalRoot}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close profile"
+          onPress={onClose}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <GlassPanel style={styles.profileModalCard} intensity={58} borderColor="rgba(185,199,255,0.62)">
+          <View style={styles.profileModalHeader}>
+            <View style={styles.profileModalAvatarWrap}>
+              <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={82} />
+              <View style={styles.profileModalOnlineDot} />
+            </View>
+            <View style={styles.profileModalIdentity}>
+              <Text style={styles.profileModalEyebrow}>{isConnected ? 'IN YOUR CIRCLE' : 'NEW PERSON'}</Text>
+              <Text style={styles.profileModalName}>{character.name}</Text>
+              <Text style={styles.profileModalMeta}>{character.location} · {character.age}</Text>
+              <View style={[styles.profileModalStatus, isConnected && styles.profileModalStatusConnected]}>
+                <View style={styles.profileModalStatusDot} />
+                <Text style={styles.profileModalStatusText}>{isConnected ? 'Connected' : 'Not connected yet'}</Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close profile"
+              onPress={onClose}
+              style={({ pressed }) => [styles.profileModalClose, pressed && styles.pressed]}
+            >
+              <AppIcon name="close" size={20} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <Text style={styles.profileModalSectionLabel}>ABOUT</Text>
+          <Text style={styles.profileModalBio}>{character.bio}</Text>
+
+          <View style={styles.profileModalDetails}>
+            <View style={styles.profileModalDetail}>
+              <Text style={styles.profileModalDetailLabel}>CONVERSATION STYLE</Text>
+              <Text style={styles.profileModalDetailValue}>{character.tone}</Text>
+            </View>
+          </View>
+
+          <View style={styles.profileModalActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close profile"
+              onPress={onClose}
+              style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonSecondary, pressed && styles.pressed]}
+            >
+              <Text style={styles.profileModalButtonSecondaryText}>Close</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isConnected ? 'Message ' + character.name : 'Meet ' + character.name}
+              onPress={isConnected ? onOpenChat : onMeet}
+              style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonPrimary, pressed && styles.pressed]}
+            >
+              <AppIcon name={isConnected ? 'chatbubble-ellipses-outline' : 'sparkles-outline'} size={16} color={colors.white} />
+              <Text style={styles.profileModalButtonPrimaryText}>{isConnected ? 'Message' : 'Meet'}</Text>
+            </Pressable>
+          </View>
+        </GlassPanel>
+      </View>
+    </Modal>
+  );
+}
+
 function PeopleScreen({
   friends,
   search,
   setSearch,
   openChat,
   meet,
-  showAllFriends,
-  toggleAllFriends,
 }: {
   friends: CharacterId[];
   search: string;
   setSearch: (value: string) => void;
   openChat: (id: CharacterId) => void;
   meet: (id: CharacterId) => void;
-  showAllFriends: boolean;
-  toggleAllFriends: () => void;
 }) {
+  const [showNewPeople, setShowNewPeople] = useState(false);
+  const [profileCharacter, setProfileCharacter] = useState<Character | null>(null);
   const normalized = search.trim().toLowerCase();
   const connected = characters.filter((character) => friends.includes(character.id));
   const suggestions = characters.filter((character) => !friends.includes(character.id) && (!normalized || `${character.name} ${character.location} ${character.bio}`.toLowerCase().includes(normalized)));
@@ -251,21 +337,56 @@ function PeopleScreen({
         <MainHeader title="People" />
         <SearchField value={search} onChangeText={setSearch} />
 
-        <SectionTitle title="Your friends" actionLabel={showAllFriends ? 'Hide' : 'See all'} onActionPress={toggleAllFriends} style={styles.peopleSectionTitle} />
-        {showAllFriends ? (
-          <View style={styles.allFriendsList}>
-            {connected.map((character) => <AllFriendRow key={character.id} character={character} onPress={() => openChat(character.id)} />)}
+        <GlassPanel style={styles.friendsHighlight} intensity={42} borderColor="rgba(129,123,240,0.62)">
+          <View style={styles.friendsHighlightHeader}>
+            <View style={styles.friendsHighlightCopy}>
+              <Text style={styles.friendsHighlightEyebrow}>YOUR CIRCLE</Text>
+              <View style={styles.friendsHighlightTitleRow}>
+                <Text style={styles.friendsHighlightTitle}>Your friends</Text>
+                <View style={styles.friendsHighlightDot} />
+              </View>
+              <Text style={styles.friendsHighlightSubtitle}>{connected.length} connected and ready to chat</Text>
+            </View>
+            <View style={styles.friendsCountBadge}>
+              <Text style={styles.friendsCountNumber}>{connected.length}</Text>
+              <Text style={styles.friendsCountLabel}>friends</Text>
+            </View>
           </View>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendRail}>
-            {connected.slice(0, 4).map((character) => <FriendCard key={character.id} character={character} onPress={() => openChat(character.id)} />)}
-          </ScrollView>
-        )}
+          {connected.length === 0 ? (
+            <Text style={styles.friendsEmpty}>Your circle is waiting for its first connection.</Text>
+          ) : (
+            <View style={styles.friendGrid}>
+              {connected.map((character) => <FriendCard key={character.id} character={character} onPress={() => setProfileCharacter(character)} />)}
+            </View>
+          )}
+        </GlassPanel>
 
-        <SectionTitle title="Meet new people" style={styles.peopleSectionTitleLarge} />
-        <View style={styles.peopleList}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={showNewPeople ? 'Hide new people' : 'Show new people'}
+          accessibilityState={{ expanded: showNewPeople, disabled: suggestions.length === 0 }}
+          disabled={suggestions.length === 0}
+          onPress={() => setShowNewPeople((current) => !current)}
+          style={({ pressed }) => [styles.peopleDiscoverToggle, pressed && styles.pressed]}
+        >
+          <View style={styles.peopleDiscoverCopy}>
+            <Text style={styles.peopleDiscoverTitle}>Meet new people</Text>
+            <Text style={styles.peopleDiscoverSubtitle}>
+              {suggestions.length > 0 ? suggestions.length + ' people to discover' : 'No new people right now'}
+            </Text>
+          </View>
+          <AppIcon name={showNewPeople ? 'chevron-up' : 'chevron-down'} size={19} color={colors.textSecondary} />
+        </Pressable>
+        {showNewPeople || suggestions.length === 0 ? (
+          <View style={styles.peopleList}>
           {suggestions.map((character) => (
             <GlassPanel key={character.id} style={styles.personCard}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={"Open " + character.name + "'s profile"}
+                onPress={() => setProfileCharacter(character)}
+                style={({ pressed }) => [styles.personCardMain, pressed && styles.pressed]}
+              >
               <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={50} />
               <View style={styles.personCopy}>
                 <View style={styles.personNameRow}>
@@ -274,16 +395,35 @@ function PeopleScreen({
                 </View>
                 <Text style={styles.personBio} numberOfLines={2}>{character.bio}</Text>
               </View>
+              </Pressable>
               <Pressable onPress={() => meet(character.id)} accessibilityRole="button" accessibilityLabel={`Meet ${character.name}`} style={({ pressed }) => [styles.meetButton, pressed && styles.pressed]}>
                 <Text style={styles.meetButtonText}>Meet</Text>
               </Pressable>
             </GlassPanel>
           ))}
           {suggestions.length === 0 ? <Text style={styles.emptyPeople}>Everyone here already knows you.</Text> : null}
-        </View>
+          </View>
+        ) : null}
 
         <Text style={styles.peopleFooter}>New connections begin quietly. Give it a little time.</Text>
       </ScrollView>
+      <FriendProfileModal
+        character={profileCharacter}
+        isConnected={profileCharacter ? friends.includes(profileCharacter.id) : false}
+        onClose={() => setProfileCharacter(null)}
+        onOpenChat={() => {
+          if (!profileCharacter) return;
+          const id = profileCharacter.id;
+          setProfileCharacter(null);
+          openChat(id);
+        }}
+        onMeet={() => {
+          if (!profileCharacter) return;
+          const id = profileCharacter.id;
+          setProfileCharacter(null);
+          meet(id);
+        }}
+      />
     </View>
   );
 }
@@ -857,7 +997,6 @@ export default function AppMain() {
   const [selectedPetId, setSelectedPetId] = useState<PetId>(DEFAULT_PET_ID);
   const [activeCharacterId, setActiveCharacterId] = useState<CharacterId | null>(null);
   const [friends, setFriends] = useState<CharacterId[]>(initialFriends);
-  const [showAllFriends, setShowAllFriends] = useState(false);
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('black');
   const [search, setSearch] = useState('');
   const [translationSteps, setTranslationSteps] = useState<Record<string, number>>({});
@@ -911,15 +1050,6 @@ export default function AppMain() {
     setActiveCharacterId(null);
     setActiveTab('people');
     setSearch('');
-    setShowAllFriends(false);
-  };
-
-  const openAllFriends = () => {
-    setRadialPreviewTab(null);
-    setActiveCharacterId(null);
-    setActiveTab('people');
-    setSearch('');
-    setShowAllFriends(true);
   };
 
   const meet = (id: CharacterId) => {
@@ -982,6 +1112,11 @@ export default function AppMain() {
     setSearch('');
   }, []);
 
+  const handleBubblePetSwitch = useCallback((id: PetId) => {
+    setSelectedPetId(id);
+    setToast(getPetCharacter(id).name + 'に切り替えました。');
+  }, []);
+
   return (
     <ScreenBackground
       appearanceMode={appearanceMode}
@@ -989,6 +1124,7 @@ export default function AppMain() {
       navigationPetPickerOpen={navigationPetPickerOpen}
       onNavigationPetPickerClose={() => setNavigationPetPickerOpen(false)}
       hideFloatingPet={!activeCharacter && visibleTab === 'pets'}
+      selectedPetId={selectedPetId}
       onSelectedPetChange={setSelectedPetId}
     >
       {activeCharacter ? (
@@ -1008,9 +1144,9 @@ export default function AppMain() {
       ) : (
         <View style={styles.appBody}>
           {visibleTab === 'chats' ? <ChatsScreen friends={friends} openChat={openChat} openPeople={openPeople} /> : null}
-           {visibleTab === 'people' ? <PeopleScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} meet={meet} showAllFriends={showAllFriends} toggleAllFriends={() => setShowAllFriends((value) => !value)} /> : null}
-           {visibleTab === 'me' ? <MeScreen notificationsEnabled={notificationsEnabled} toggleNotifications={() => setNotificationsEnabled((value) => !value)} appearanceMode={appearanceMode} setAppearanceMode={setAppearanceMode} onOpenPeople={openAllFriends} showToast={showToast} /> : null}
-           {visibleTab === 'pets' ? <PetsScreen pet={selectedPet} onSwitch={() => setNavigationPetPickerOpen(true)} onSelectPet={setSelectedPetId} /> : null}
+           {visibleTab === 'people' ? <PeopleScreen friends={friends} search={search} setSearch={setSearch} openChat={openChat} meet={meet} /> : null}
+           {visibleTab === 'me' ? <MeScreen notificationsEnabled={notificationsEnabled} toggleNotifications={() => setNotificationsEnabled((value) => !value)} appearanceMode={appearanceMode} setAppearanceMode={setAppearanceMode} onOpenPeople={openPeople} showToast={showToast} /> : null}
+           {visibleTab === 'pets' ? <PetsScreen pet={selectedPet} onSwitch={() => setNavigationPetPickerOpen(true)} onSelectPet={handleBubblePetSwitch} /> : null}
            <RadialNavigationMenu activeKey={visibleTab} onPreviewChange={handleRadialPreviewChange} onOpenChange={handleRadialOpenChange} onChange={handleRadialChange} items={[
              { key: 'chats', label: 'Chats', icon: <AppIcon name="chatbubble-ellipses-outline" size={22} color={visibleTab === 'chats' ? colors.textPrimary : colors.textSecondary} /> },
              { key: 'people', label: 'Friends', icon: <AppIcon name="people-outline" size={22} color={visibleTab === 'people' ? colors.textPrimary : colors.textSecondary} /> },
@@ -1050,8 +1186,8 @@ const styles = StyleSheet.create({
   discoverCopy: { flex: 1 },
   discoverTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   discoverSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
-  friendRail: { gap: 10, paddingBottom: 2 },
-  friendCard: { width: 112, minHeight: 128, alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 22, borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: colors.glass, shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12, overflow: 'hidden' },
+  friendGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  friendCard: { width: '48%', minHeight: 144, alignItems: 'center', justifyContent: 'center', padding: 13, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(185,199,255,0.52)', backgroundColor: 'rgba(14,20,40,0.58)', shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12, overflow: 'hidden' },
   friendCardNameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 9 },
   friendCardName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   friendOnlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accentBlue, marginLeft: 5 },
@@ -1063,8 +1199,25 @@ const styles = StyleSheet.create({
   allFriendMeta: { color: colors.textMuted, fontSize: 11, marginTop: 3 },
   peopleSectionTitle: { marginTop: 26, marginBottom: 11 },
   peopleSectionTitleLarge: { marginTop: 27, marginBottom: 11 },
+  friendsHighlight: { marginTop: 26, padding: 14, borderRadius: 26, backgroundColor: 'rgba(69,61,140,0.28)' },
+  friendsHighlightHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 13 },
+  friendsHighlightCopy: { flex: 1, minWidth: 0, paddingTop: 2 },
+  friendsHighlightEyebrow: { color: '#B9B6FF', fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.45 },
+  friendsHighlightTitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  friendsHighlightTitle: { color: colors.textPrimary, fontSize: 21, lineHeight: 27, fontWeight: '900' },
+  friendsHighlightDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 8, backgroundColor: '#70D5A4', shadowColor: '#70D5A4', shadowOpacity: 0.75, shadowRadius: 7, shadowOffset: { width: 0, height: 0 }, elevation: 5 },
+  friendsHighlightSubtitle: { color: colors.textSecondary, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  friendsCountBadge: { width: 58, height: 55, alignItems: 'center', justifyContent: 'center', marginLeft: 10, borderRadius: 17, backgroundColor: 'rgba(109,103,225,0.46)', borderWidth: 1, borderColor: '#817BF0' },
+  friendsCountNumber: { color: '#F2EEFF', fontSize: 20, lineHeight: 22, fontWeight: '900' },
+  friendsCountLabel: { color: '#C8C2FF', fontSize: 9, lineHeight: 12, fontWeight: '800', marginTop: 1 },
+  friendsEmpty: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center', paddingVertical: 15 },
+  peopleDiscoverToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 66, marginTop: 27, marginBottom: 11, paddingHorizontal: 15, paddingVertical: 12, borderRadius: 19, borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: colors.glass },
+  peopleDiscoverCopy: { flex: 1, minWidth: 0 },
+  peopleDiscoverTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800' },
+  peopleDiscoverSubtitle: { color: colors.textMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   peopleList: { gap: 9 },
   personCard: { minHeight: 84, flexDirection: 'row', alignItems: 'center', padding: 11, borderRadius: 22 },
+  personCardMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', minHeight: 60 },
   personCopy: { flex: 1, minWidth: 0, marginHorizontal: 11 },
   personNameRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   personName: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
@@ -1074,6 +1227,32 @@ const styles = StyleSheet.create({
   meetButtonText: { color: colors.textPrimary, fontSize: 13, fontWeight: '700' },
   emptyPeople: { color: colors.textMuted, textAlign: 'center', paddingVertical: 28 },
   peopleFooter: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 26, paddingHorizontal: 30 },
+  profileModalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.74)' },
+  profileModalCard: { width: '100%', maxWidth: 390, padding: 20, borderRadius: 28, backgroundColor: 'rgba(14,20,40,0.96)' },
+  profileModalHeader: { flexDirection: 'row', alignItems: 'center' },
+  profileModalAvatarWrap: { position: 'relative' },
+  profileModalOnlineDot: { position: 'absolute', width: 14, height: 14, right: 1, bottom: 2, borderRadius: 7, borderWidth: 2, borderColor: '#0E1428', backgroundColor: colors.success },
+  profileModalIdentity: { flex: 1, minWidth: 0, marginLeft: 14 },
+  profileModalEyebrow: { color: '#B9B6FF', fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.25 },
+  profileModalName: { color: colors.textPrimary, fontSize: 24, lineHeight: 30, fontWeight: '900', marginTop: 1 },
+  profileModalMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  profileModalStatus: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(132,140,169,0.14)', borderWidth: 1, borderColor: 'rgba(132,140,169,0.25)' },
+  profileModalStatusConnected: { backgroundColor: 'rgba(112,213,164,0.12)', borderColor: 'rgba(112,213,164,0.32)' },
+  profileModalStatusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 5, backgroundColor: colors.success },
+  profileModalStatusText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
+  profileModalClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: 8, borderRadius: 22, backgroundColor: 'rgba(132,140,169,0.12)', borderWidth: 1, borderColor: colors.glassBorder },
+  profileModalSectionLabel: { color: colors.textMuted, fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 1.2, marginTop: 24, marginBottom: 7 },
+  profileModalBio: { color: colors.textPrimary, fontSize: 16, lineHeight: 23 },
+  profileModalDetails: { marginTop: 19, padding: 12, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: colors.glassBorder },
+  profileModalDetail: { minWidth: 0 },
+  profileModalDetailLabel: { color: colors.textMuted, fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.05 },
+  profileModalDetailValue: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  profileModalActions: { flexDirection: 'row', gap: 9, marginTop: 20 },
+  profileModalButton: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1 },
+  profileModalButtonSecondary: { borderColor: colors.glassBorder, backgroundColor: 'rgba(132,140,169,0.1)' },
+  profileModalButtonPrimary: { borderColor: '#817BF0', backgroundColor: 'rgba(109,103,225,0.52)' },
+  profileModalButtonSecondaryText: { color: colors.textSecondary, fontSize: 13, fontWeight: '700' },
+  profileModalButtonPrimaryText: { color: colors.white, fontSize: 13, fontWeight: '800' },
   profileCard: { padding: 16, borderRadius: 22 },
   profileCardPressable: { borderRadius: 22 },
   profileEditor: { marginTop: 9, padding: 14, borderRadius: 18 },

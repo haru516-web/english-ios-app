@@ -6,6 +6,7 @@ import { conversationGroup3 } from './conversationGroup3';
 import { conversationGroup4 } from './conversationGroup4';
 import { conversationGroup5 } from './conversationGroup5';
 import { conversationGroup6 } from './conversationGroup6';
+import { conversationGroup7 } from './conversationGroup7';
 import { practicalConversationBeats } from './practicalConversations';
 import { practicalReactionSets } from './practicalReactions';
 import { reciprocalTurns } from './reciprocalTurns';
@@ -19,34 +20,11 @@ export const conversationScripts: ConversationGroup = {
   ...conversationGroup4,
   ...conversationGroup5,
   ...conversationGroup6,
+  ...conversationGroup7,
 };
 
-function lowerFirst(value: string) {
-  return value.length ? `${value[0].toLowerCase()}${value.slice(1)}` : value;
-}
-
 export function getConversationRound(characterId: CharacterId, roundIndex: number): ConversationRound | undefined {
-  const round = conversationScripts[characterId]?.[roundIndex];
-  const beat = practicalConversationBeats[roundIndex];
-  if (!round || !beat) return undefined;
-
-  const [promptEnglish, promptJapanese, ...replies] = beat;
-  const [questionEnglish, questionJapanese] = reciprocalTurns[roundIndex];
-
-  return {
-    ...round,
-    promptEnglish,
-    promptJapanese,
-    choices: round.choices.map((choice, choiceIndex) => ({
-      ...choice,
-      english: choiceIndex === 1 && questionEnglish
-        ? `${replies[choiceIndex][0]} ${questionEnglish}`
-        : replies[choiceIndex][0],
-      japanese: choiceIndex === 1 && questionJapanese
-        ? `${replies[choiceIndex][1]} ${questionJapanese}`
-        : replies[choiceIndex][1],
-    })),
-  };
+  return conversationScripts[characterId]?.[roundIndex];
 }
 
 export function getConversationChoice(characterId: CharacterId, roundIndex: number, choiceId: string): ConversationChoice | undefined {
@@ -55,7 +33,7 @@ export function getConversationChoice(characterId: CharacterId, roundIndex: numb
 
 type DialogueLine = { en: string; ja: string };
 
-const naturalReactions: Record<CharacterId, readonly DialogueLine[]> = {
+const naturalReactions: Partial<Record<CharacterId, readonly DialogueLine[]>> = {
   jack: [
     { en: 'Yeah, I get that.', ja: 'うん、分かるよ。' },
     { en: 'Same here.', ja: '僕も同じ。' },
@@ -158,26 +136,18 @@ export function buildConversationReply(characterId: CharacterId, roundIndex: num
   const choice = getConversationChoice(characterId, roundIndex, choiceId);
   if (!choice) return null;
 
-  const round = getConversationRound(characterId, roundIndex);
   const nextRound = getConversationRound(characterId, roundIndex + 1);
-  const choiceIndex = Math.max(0, round?.choices.findIndex((candidate) => candidate.id === choiceId) ?? 0);
-  const [defaultReactionEnglish, defaultReactionJapanese] = practicalReactionSets[roundIndex][choiceIndex];
-  const [, , reciprocalAnswerEnglish, reciprocalAnswerJapanese] = reciprocalTurns[roundIndex];
-  const [reactionEnglish, reactionJapanese] = choiceIndex === 1
-    ? [reciprocalAnswerEnglish, reciprocalAnswerJapanese]
-    : [defaultReactionEnglish, defaultReactionJapanese];
-  const reaction = { en: reactionEnglish, ja: reactionJapanese };
   const nextPrompt = nextRound ? {
     en: nextRound.promptEnglish,
     ja: nextRound.promptJapanese,
   } : null;
 
   return {
-    id: `${characterId}-reply-${roundIndex + 1}-${choiceId}`,
-    text: nextPrompt ? `${reaction.en} ${nextPrompt.en}` : reaction.en,
+    id: characterId + '-reply-' + String(roundIndex + 1) + '-' + choiceId,
+    text: nextPrompt ? choice.responseEnglish + ' ' + nextPrompt.en : choice.responseEnglish,
     translation: {
-      english: nextPrompt ? [reaction.en, nextPrompt.en] : [reaction.en],
-      japanese: nextPrompt ? [reaction.ja, nextPrompt.ja] : [reaction.ja],
+      english: nextPrompt ? [choice.responseEnglish, nextPrompt.en] : [choice.responseEnglish],
+      japanese: nextPrompt ? [choice.responseJapanese, nextPrompt.ja] : [choice.responseJapanese],
     },
   };
 }
@@ -195,6 +165,19 @@ const expectedCharacterIds: readonly CharacterId[] = [
   'lena',
   'mara',
   'camille',
+  'milo',
+  'clara',
+  'arthur',
+  'leo',
+  'julian',
+  'declan',
+  'elias',
+  'adrian',
+  'caleb',
+  'sloane',
+  'victoria',
+  'elodie',
+  'blair',
 ];
 
 function assertNonEmpty(value: string, label: string) {

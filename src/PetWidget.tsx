@@ -263,12 +263,14 @@ export function PetWidget({
   navigationPickerOpen = false,
   onNavigationPickerClose,
   hideFloatingPet = false,
+  selectedPetId,
   onSelectedPetChange,
 }: {
   avoidBottom?: number;
   navigationPickerOpen?: boolean;
   onNavigationPickerClose?: () => void;
   hideFloatingPet?: boolean;
+  selectedPetId?: PetId;
   onSelectedPetChange?: (id: PetId) => void;
 }) {
   const [selectedId, setSelectedId] = useState<PetId>(DEFAULT_PET_ID);
@@ -296,17 +298,20 @@ export function PetWidget({
   const lookupRequestRef = useRef(0);
   const pickerInitialIdRef = useRef<PetId>(selectedId);
   const navigationPickerWasOpenRef = useRef(false);
+  const initialParentSelectedPetIdRef = useRef<PetId | undefined>(selectedPetId);
+  const lastParentSelectedPetIdRef = useRef<PetId | undefined>(selectedPetId);
   const pet = getPetCharacter(selectedId);
   const pickerVisible = pickerOpen || navigationPickerOpen;
   const effectiveAvoidBottom = Math.max(avoidBottom, keyboardHeight > 0 ? keyboardHeight + 20 : avoidBottom);
 
+  const updateSelectedPet = useCallback((id: PetId) => {
+    setSelectedId(id);
+    onSelectedPetChange?.(id);
+  }, [onSelectedPetChange]);
+
   useEffect(() => {
     positionRef.current = position;
   }, [position]);
-
-  useEffect(() => {
-    onSelectedPetChange?.(selectedId);
-  }, [onSelectedPetChange, selectedId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -315,7 +320,10 @@ export function PetWidget({
         if (!raw) return;
         try {
           const stored = JSON.parse(raw) as StoredPetState;
-          if (isPetId(stored.selectedId)) setSelectedId(stored.selectedId);
+          if (isPetId(stored.selectedId) && lastParentSelectedPetIdRef.current === initialParentSelectedPetIdRef.current) {
+            setSelectedId(stored.selectedId);
+            onSelectedPetChange?.(stored.selectedId);
+          }
           if (typeof stored.xRatio === 'number' && typeof stored.yRatio === 'number') {
             savedRatioRef.current = { x: clamp(stored.xRatio, 0, 1), y: clamp(stored.yRatio, 0, 1) };
           }
@@ -330,7 +338,7 @@ export function PetWidget({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onSelectedPetChange]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
@@ -373,6 +381,14 @@ export function PetWidget({
       yRatio: point.y / layout.height,
     })).catch(() => undefined);
   }, [layout]);
+
+  useEffect(() => {
+    if (selectedPetId == null || selectedPetId === lastParentSelectedPetIdRef.current) return;
+    lastParentSelectedPetIdRef.current = selectedPetId;
+    if (selectedPetId === selectedId) return;
+    setSelectedId(selectedPetId);
+    persist(selectedPetId, positionRef.current);
+  }, [persist, selectedPetId, selectedId]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -566,17 +582,17 @@ export function PetWidget({
   }, [navigationPickerOpen, selectedId]);
 
   const closePicker = useCallback(() => {
-    setSelectedId(pickerInitialIdRef.current);
+    updateSelectedPet(pickerInitialIdRef.current);
     setPickerOpen(false);
     if (navigationPickerOpen) onNavigationPickerClose?.();
-  }, [navigationPickerOpen, onNavigationPickerClose]);
+  }, [navigationPickerOpen, onNavigationPickerClose, updateSelectedPet]);
 
   const previewPicker = useCallback((id: PetId) => {
-    setSelectedId(id);
-  }, []);
+    updateSelectedPet(id);
+  }, [updateSelectedPet]);
 
   const confirmPicker = useCallback((id: PetId) => {
-    setSelectedId(id);
+    updateSelectedPet(id);
     persist(id, position);
     setPickerOpen(false);
     setAskOpen(true);
@@ -584,7 +600,7 @@ export function PetWidget({
     setLookup(null);
     setValidationMessage(null);
     if (navigationPickerOpen) onNavigationPickerClose?.();
-  }, [hideFloatingPet, navigationPickerOpen, onNavigationPickerClose, persist, position]);
+  }, [navigationPickerOpen, onNavigationPickerClose, persist, position, updateSelectedPet]);
 
   const handleLookup = useCallback(() => {
     if (lookupLoading) return;

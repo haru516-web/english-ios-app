@@ -82,7 +82,20 @@ export type CharacterId =
   | 'finn'
   | 'lena'
   | 'mara'
-  | 'camille';
+  | 'camille'
+  | 'milo'
+  | 'clara'
+  | 'arthur'
+  | 'leo'
+  | 'julian'
+  | 'declan'
+  | 'elias'
+  | 'adrian'
+  | 'caleb'
+  | 'sloane'
+  | 'victoria'
+  | 'elodie'
+  | 'blair';
 export type ChatId = `chat-${CharacterId}`;
 export type MessageId = string;
 export type ReplyChoiceId = string;
@@ -162,6 +175,19 @@ export const characters: readonly Character[] = [
   { id: 'lena', name: 'Lena', location: 'Los Angeles', age: 24, bio: 'A fashion-loving law student whose optimism is sharper than people expect.', initials: 'L', gradient: ['#B06988', '#69528A'], tone: 'Upbeat confident Californian English', isFree: false, isConnected: false },
   { id: 'mara', name: 'Mara', location: 'New York', age: 45, bio: 'A legendary editor with exacting standards and immaculate composure.', initials: 'M', gradient: ['#626272', '#3E4354'], tone: 'Precise demanding professional English', isFree: false, isConnected: false },
   { id: 'camille', name: 'Camille', location: 'Paris', age: 25, bio: 'A quiet dreamer who notices small wonders and gently changes lives.', initials: 'C', gradient: ['#9A6B64', '#4F6872'], tone: 'Gentle imaginative French-influenced English', isFree: false, isConnected: false },
+  { id: 'milo', name: 'Milo', location: 'New York', age: 24, bio: 'A free-spirited event photographer who finds stories in accidental detours.', initials: 'M', gradient: ['#C17247', '#485E83'], tone: 'Free-spirited curious New York English', isFree: false, isConnected: false },
+  { id: 'clara', name: 'Clara', location: 'Chicago', age: 25, bio: 'A thoughtful museum educator who remembers what people meant to say.', initials: 'C', gradient: ['#8B6A58', '#4D5D72'], tone: 'Measured empathetic American English', isFree: false, isConnected: false },
+  { id: 'arthur', name: 'Arthur', location: 'London', age: 29, bio: 'A precise contract lawyer who is kinder than his first sentence suggests.', initials: 'A', gradient: ['#687080', '#5A463B'], tone: 'Dry precise British English', isFree: false, isConnected: false },
+  { id: 'leo', name: 'Leo', location: 'Seattle', age: 21, bio: 'A quick-witted student who turns nerves into jokes and useful fixes.', initials: 'L', gradient: ['#4B7187', '#76557A'], tone: 'Witty tech-casual American English', isFree: false, isConnected: false },
+  { id: 'julian', name: 'Julian', location: 'Chicago', age: 27, bio: 'A curious podcast producer who finds big questions in ordinary details.', initials: 'J', gradient: ['#6E5E7B', '#3E6171'], tone: 'Curious philosophical American English', isFree: false, isConnected: false },
+  { id: 'declan', name: 'Declan', location: 'Dublin', age: 30, bio: 'A warm community organizer who makes room for people on the edge.', initials: 'D', gradient: ['#66806D', '#53677B'], tone: 'Encouraging Irish English', isFree: false, isConnected: false },
+  { id: 'elias', name: 'Elias', location: 'Manchester', age: 28, bio: 'A quiet visual designer learning to turn daydreams into departures.', initials: 'E', gradient: ['#657B66', '#53647A'], tone: 'Reflective understated British English', isFree: false, isConnected: false },
+  { id: 'adrian', name: 'Adrian', location: 'Santa Fe', age: 37, bio: 'An archaeology professor who tests every exciting idea against evidence.', initials: 'A', gradient: ['#80613E', '#46535D'], tone: 'Dry adventurous academic English', isFree: false, isConnected: false },
+  { id: 'caleb', name: 'Caleb', location: 'Austin', age: 38, bio: 'A history teacher and coach who believes the next step is enough.', initials: 'C', gradient: ['#6D765C', '#79563F'], tone: 'Direct grounded Texan English', isFree: false, isConnected: false },
+  { id: 'sloane', name: 'Sloane', location: 'Los Angeles', age: 25, bio: 'A fashion-minded law student with bright energy and sharper standards.', initials: 'S', gradient: ['#C05C88', '#6B5AA0'], tone: 'Upbeat strategic Californian English', isFree: false, isConnected: false },
+  { id: 'victoria', name: 'Victoria', location: 'New York', age: 47, bio: 'An exacting editor who turns vague ideas into something worth publishing.', initials: 'V', gradient: ['#626272', '#4A536C'], tone: 'Concise precise New York English', isFree: false, isConnected: false },
+  { id: 'elodie', name: 'Élodie', location: 'Paris', age: 27, bio: 'A gentle illustrator who notices the small details people leave behind.', initials: 'É', gradient: ['#A5746C', '#55727A'], tone: 'Soft sensory French English', isFree: false, isConnected: false },
+  { id: 'blair', name: 'Blair', location: 'New York', age: 26, bio: 'A polished brand editor with high standards and fiercely loyal instincts.', initials: 'B', gradient: ['#8D587A', '#4D526F'], tone: 'Sharp polished New York English', isFree: false, isConnected: false },
 ] as const;
 
 export const chatSummaries: readonly ChatSummary[] = [
