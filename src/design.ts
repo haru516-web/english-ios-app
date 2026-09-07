@@ -122,6 +122,15 @@ export interface TranslationState {
   englishSentenceIndexes?: number[];
 }
 
+export interface PhotoAttachment {
+  emoji: string;
+  sceneEnglish: string;
+  sceneJapanese: string;
+  detailEnglish: string;
+  detailJapanese: string;
+  accent: string;
+}
+
 export interface Message {
   id: MessageId;
   chatId: ChatId;
@@ -130,6 +139,10 @@ export interface Message {
   text: string;
   timestamp: string | number;
   translation?: TranslationState;
+  photo?: PhotoAttachment;
+  sessionLabelEnglish?: string;
+  sessionLabelJapanese?: string;
+  replyChoiceId?: ReplyChoiceId;
   isRead?: boolean;
 }
 

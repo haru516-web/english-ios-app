@@ -40,9 +40,9 @@ const topics: readonly Topic[] = [
     line('Good company', 'いい人と一緒にいること'),
   ]],
   [line('What is your easiest way to say hello?', 'いちばん気軽なあいさつは？'), [
-    line('A simple hey', 'シンプルな「やあ」'),
-    line('A question', '質問から入る'),
-    line('An invitation', '誘いをかける'),
+    line('A quick “hey” and a real follow-up', '軽い「やあ」と本気のひとこと'),
+    line('Ask what kind of day they are having', 'どんな一日か聞く'),
+    line('Invite them to do something small together', '小さなことに一緒に誘う'),
   ]],
   [line('What small thing can still make you laugh?', '今でも笑ってしまう小さなことは？'), [
     line('A ridiculous mistake', 'ばかばかしい失敗'),
@@ -290,23 +290,23 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   milo: {
     id: 'milo',
     openers: [
-      line("Quick question from between two jobs:", "仕事の合間に、ちょっと聞いていい？"),
-      line("I found some great light today, and it made me wonder:", "今日はいい光を見つけて、それでふと思ったんだけど、"),
-      line("No perfect plan needed for this one:", "これは完璧な予定なんていらない質問で、"),
-      line("I want the honest version:", "飾らない答えが聞きたいな。"),
-      line("If we walked out right now, I would ask:", "今すぐ外へ出るなら、僕はこう聞くかな。"),
+      line("The light was good on the way here. It made me wonder—", "ここに来る途中の光がきれいで、ふと思ったんだ——"),
+      line("I saw some great light on the way here and thought of you.", "ここに来る途中でいい光を見つけて、君のことを思い出した。"),
+      line("This feels like a good question for a walk.", "これは散歩しながら話したくなる質問だね。"),
+      line("Give me the honest version.", "飾らない答えを聞かせて。"),
+      line("I was wondering about this.", "これ、ちょっと気になってた。"),
     ],
     promptTails: [
-      line("I want to know what would pull you into the night.", "どんなものが君を夜へ連れ出すのか、知りたいんだ。"),
-      line("The best stories usually begin with a small detail.", "いい物語は、たいてい小さな細部から始まる。"),
-      line("You do not have to make the answer sound impressive.", "答えを立派に聞かせなくていいよ。"),
-      line("I am collecting reasons to go see the world.", "世界を見に行く理由を集めているんだ。"),
-      line("Maybe I will steal the idea for a postcard.", "もしかしたら、そのアイデアを絵はがきに書くかも。"),
+      line("I’m curious what makes you choose it.", "何がそう思わせるのか気になる。"),
+      line("The small details are usually the part I remember.", "小さな細部こそ、僕が覚えている部分なんだ。"),
+      line("You do not have to make it sound clever.", "気の利いた答えにしなくていいよ。"),
+      line("I’m always looking for a reason to go see the world.", "世界を見に行く理由を、いつも探しているんだ。"),
+      line("I might steal that for a photo walk.", "それ、写真を撮りながら歩くときに借りるかも。"),
     ],
     replies: [
       [
         line("That sounds like a good way to start. I would bring a camera and see where the day goes.", "それ、いい始まり方だね。カメラを持って、その日の流れを見てみたいな。"),
-        line("A slow plan can still turn into a story. What would make it worth leaving the house?", "ゆっくりした予定だって物語になるよ。家を出る価値があるのは、どんな瞬間かな？"),
+        line("A slow plan can still turn into a story. I’d want one detail that made leaving the house worth it.", "ゆっくりした予定だって物語になるよ。家を出てよかったと思える細部が一つあればいい。"),
         line("Good people are a pretty reliable map. I would follow that.", "いい人たちがいるなら、それはかなり頼れる地図だよ。僕ならそっちへ行く。"),
       ],
       [
@@ -359,7 +359,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   clara: {
     id: 'clara',
     openers: [
-      line("Can I ask this gently?", "少し丁寧に聞いてもいい？"),
+      line("I’ve been thinking about what makes a day feel easy.", "どんな日なら楽に感じられるのか、ずっと考えていたの。"),
       line("I want to understand rather than judge:", "判断するより理解したくて聞くんだけど、"),
       line("Take your time with this one:", "これは急がずに答えてね。"),
       line("I noticed something in your last answer:", "さっきの答えで、少し気になったことがあって、"),
@@ -428,7 +428,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   arthur: {
     id: 'arthur',
     openers: [
-      line("A reasonably practical question:", "かなり実務的な質問をひとつ。"),
+      line("I was thinking about something practical.", "実際的なことを少し考えていた。"),
       line("For the sake of clarity:", "話を明確にするために聞くけれど、"),
       line("I am curious, despite appearances:", "こう見えて、少し気になっている。"),
       line("No need to make a speech:", "長いスピーチは不要だよ。"),
@@ -497,7 +497,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   leo: {
     id: 'leo',
     openers: [
-      line("Okay, important question, zero pressure:", "よし、大事な質問。プレッシャーはゼロで、"),
+      line("Okay, I need to know this before I overthink it.", "考えすぎる前に、これだけ知りたい。"),
       line("My brain has produced a follow-up, sorry in advance:", "頭が勝手に追加質問を作った。先に謝っておくね。"),
       line("This may be a terrible segue, but:", "ひどい話題転換かもしれないけど、"),
       line("Quick poll before I overthink it:", "考えすぎる前に、簡単な投票を、"),
@@ -566,7 +566,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   julian: {
     id: 'julian',
     openers: [
-      line("Here is a question I keep coming back to:", "何度も戻ってきてしまう質問があって、"),
+      line("I keep coming back to this.", "このことが、何度も頭に戻ってくるんだ。"),
       line("There is something interesting about this:", "これって、少し面白いと思うんだけど、"),
       line("Let us stay with that thought for a moment:", "その考えを、もう少しだけ一緒に眺めてみると、"),
       line("I am curious where your mind goes:", "君の考えがどこへ向かうのか気になって、"),
@@ -635,7 +635,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   declan: {
     id: 'declan',
     openers: [
-      line("Right, let me ask you this, friend:", "では、友だち。これを聞かせて、"),
+      line("Let’s start with an easy one, friend.", "友だち、まずは簡単なところから始めよう。"),
       line("No rush, but I would love to know:", "急がなくていいけど、知りたいな。"),
       line("You can answer honestly here:", "ここでは正直に答えて大丈夫だよ。"),
       line("Let us make this one easy:", "これは簡単な質問にしよう。"),
@@ -704,7 +704,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   elias: {
     id: 'elias',
     openers: [
-      line("This may sound strange, but the light made me think:", "少し変に聞こえるかもしれないけど、光を見て思ったんだ。"),
+      line("The light made me think of this.", "光を見て、このことを思ったんだ。"),
       line("I keep picturing a road that starts here:", "ここから始まる道を、ずっと思い浮かべていて、"),
       line("A small question, before I lose the thought:", "考えを失う前に、小さな質問をひとつ。"),
       line("I am trying to be brave enough to ask:", "聞く勇気を少し出して、"),
@@ -773,7 +773,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   adrian: {
     id: 'adrian',
     openers: [
-      line("Let us define the question first:", "まず、質問を定義しよう。"),
+      line("I’m curious whether the ordinary answer is the useful one.", "普通の答えが役に立つものなのか、少し気になっている。"),
       line("I have a working hypothesis:", "仮説がひとつある。"),
       line("Before we turn it into a story:", "物語にする前に、"),
       line("The evidence may be in the ordinary details:", "証拠は普通の細部にあるかもしれない。"),
@@ -911,7 +911,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   sloane: {
     id: 'sloane',
     openers: [
-      line("Okay, let us make this answer useful:", "よし、この答えを役立つものにしよう。"),
+      line("Okay, first impression.", "よし、まずは第一印象から。"),
       line("Honest answer, good lighting optional:", "正直な答えで。照明はなくても大丈夫。"),
       line("I have a theory, but you get to correct me:", "私には仮説があるけど、訂正する権利はあなたにある。"),
       line("Let us put the pressure in its place:", "プレッシャーは、あるべき場所に置いて、"),
@@ -980,7 +980,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   victoria: {
     id: 'victoria',
     openers: [
-      line("Be specific:", "具体的に答えて。"),
+      line("Start with the useful detail.", "役に立つ細部から始めましょう。"),
       line("Let us remove the unnecessary drama:", "不要なドラマは省きましょう。"),
       line("I want the useful answer:", "役に立つ答えが欲しいわ。"),
       line("A concise question:", "簡潔に聞くわ。"),
@@ -1118,7 +1118,7 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   blair: {
     id: 'blair',
     openers: [
-      line("That is a choice. Tell me you made it deliberately:", "それは選択ね。意図して選んだのか、教えて。"),
+      line("I want the honest version.", "正直な答えが欲しいの。"),
       line("I need the honest version, not the polished one:", "磨き上げた答えではなく、正直な方が欲しいの。"),
       line("Before you say it does not matter:", "「どうでもいい」と言う前に、"),
       line("We can make this better:", "これはもっとよくできる。だから、"),
@@ -1186,16 +1186,26 @@ const voiceProfiles: Record<NewCharacterId, VoiceProfile> = {
   },
 };
 
+const joinPromptParts = (...parts: Line[]): Line => [
+  parts.map(([english]) => english.trim()).filter(Boolean).join(' ').replace(/—\s+/g, '—'),
+  parts.map(([, japanese]) => japanese.trim()).filter(Boolean).join(' ').replace(/—\s+/g, '—'),
+];
+
 const makeRounds = (voice: VoiceProfile): ConversationRound[] => topics.map(([question, choices], index) => {
   const opener = voice.openers[index % voice.openers.length];
   const promptTail = voice.promptTails[index % voice.promptTails.length];
   const responseSet = voice.replies[index % voice.replies.length];
+  const promptParts: Line[] = [];
+  if (index === 0) promptParts.push(opener);
+  if (index > 0) promptParts.push(promptTail);
+  promptParts.push(question);
+  const prompt = joinPromptParts(...promptParts);
   const roundId = voice.id + '-' + String(index + 1).padStart(2, '0');
 
   return {
     id: roundId,
-    promptEnglish: opener[0] + ' ' + question[0] + ' ' + promptTail[0],
-    promptJapanese: opener[1] + ' ' + question[1] + ' ' + promptTail[1],
+    promptEnglish: prompt[0],
+    promptJapanese: prompt[1],
     isCustom: true,
     choices: choices.map((choice, choiceIndex) => ({
       id: roundId + '-' + String(choiceIndex + 1),

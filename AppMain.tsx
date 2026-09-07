@@ -16,11 +16,14 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 
 import { DEFAULT_PET_ID, PetWidget } from './src/PetWidget';
 import { RadialNavigationMenu } from './src/RadialNavigationMenu';
 import { getPetCharacter, PET_CHARACTERS, type PetCharacter, type PetId } from './src/petCatalog';
+import { characterStreetVisuals } from './src/characterVisuals';
+import { getCharacterProfile } from './src/characterProfiles';
 
 import {
   Character,
@@ -36,7 +39,7 @@ import {
   spacing,
   typography,
 } from './src/design';
-import { buildConversationReply, getConversationRound } from './src/conversations';
+import { buildConversationReply, getConversationRound, RELATIONSHIP_ROUND_COUNT, type ConversationHistory, type UserGender } from './src/relationshipConversations';
 import {
   Avatar,
   ChatRow,
@@ -57,7 +60,7 @@ type PendingConversationReply = {
   reply: NonNullable<ReturnType<typeof buildConversationReply>>;
 };
 
-const initialFriends: CharacterId[] = ['jack', 'emma', 'oliver'];
+const initialFriends: CharacterId[] = characters.map((character) => character.id);
 const iconColor = colors.textSecondary;
 
 function AppIcon({
@@ -182,7 +185,7 @@ function ChatsScreen({
               unread={summary.unreadCount > 0}
               online={summary.isOnline}
               onPress={() => openChat(character.id)}
-              avatar={<Avatar name={character.name} initials={character.initials} colors={character.gradient} size={50} accessibilityLabel={`${character.name}'s avatar`} />}
+              avatar={<Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={50} accessibilityLabel={`${character.name}'s avatar`} />}
               style={styles.chatRowSpacing}
             />
           ))}
@@ -205,7 +208,7 @@ function ChatsScreen({
 function FriendCard({ character, onPress }: { character: Character; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open ${character.name}'s profile`} style={({ pressed }) => [styles.friendCard, pressed && styles.pressed]}>
-      <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={66} />
+      <Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={66} />
       <View style={styles.friendCardNameRow}>
         <Text style={styles.friendCardName}>{character.name}</Text>
         <View style={styles.friendOnlineDot} />
@@ -218,12 +221,35 @@ function FriendCard({ character, onPress }: { character: Character; onPress: () 
 function AllFriendRow({ character, onPress }: { character: Character; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open ${character.name}'s profile`} style={({ pressed }) => [styles.allFriendRow, pressed && styles.pressed]}>
-      <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={44} />
+      <Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={44} />
       <View style={styles.allFriendCopy}>
         <Text style={styles.allFriendName}>{character.name}</Text>
         <Text style={styles.allFriendMeta}>{character.location} · {character.tone}</Text>
       </View>
       <AppIcon name="chevron-forward" size={18} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
+function ProfileInfoSection({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label + ': ' + value}
+      accessibilityHint="Tap to switch the profile language"
+      onPress={onPress}
+      style={({ pressed }) => [styles.profileModalInfoCard, pressed && styles.profileModalInfoCardPressed]}
+    >
+      <Text style={styles.profileModalDetailLabel}>{label}</Text>
+      <Text style={styles.profileModalDetailValue}>{value}</Text>
     </Pressable>
   );
 }
@@ -241,71 +267,218 @@ function FriendProfileModal({
   onOpenChat: () => void;
   onMeet: () => void;
 }) {
-  if (!character) return null;
+  const [profileLanguage, setProfileLanguage] = useState<'en' | 'ja'>('en');
+
+  useEffect(() => {
+    setProfileLanguage('en');
+  }, [character?.id]);
+
+  const profile = character ? getCharacterProfile(character.id) : null;
+  const isJapanese = profileLanguage === 'ja';
+  const toggleProfileLanguage = useCallback(() => {
+    setProfileLanguage((current) => current === 'en' ? 'ja' : 'en');
+  }, []);
+
+  if (!character || !profile) return null;
+
+  const localized = (value: { en: string; ja: string }) => value[profileLanguage];
+  const labels = isJapanese ? {
+    streetProfile: 'プロフィール',
+    inCircle: 'あなたのフレンド',
+    newPerson: '新しいフレンド',
+    connected: '接続済み',
+    notConnected: '未接続',
+    language: '英語で表示',
+    languageHint: 'タップして英語に戻す',
+    closeProfile: 'プロフィールを閉じる',
+    close: '閉じる',
+    message: 'メッセージ',
+    meet: '会ってみる',
+    about: '概要',
+    model: 'モデル',
+    birthday: '誕生日',
+    origin: '出生地・居住地',
+    role: '仕事',
+    education: '学歴',
+    personality: '性格',
+    innerWorld: '内面の欲求と恐れ',
+    family: '家族構成',
+    friends: '友人関係',
+    hobbies: '趣味',
+    relationship: '人間関係',
+    conversation: '会話スタイル',
+    growth: '成長軸',
+  } : {
+    streetProfile: 'STREET PROFILE',
+    inCircle: 'IN YOUR CIRCLE',
+    newPerson: 'NEW PERSON',
+    connected: 'Connected',
+    notConnected: 'Not connected yet',
+    language: '日本語で表示',
+    languageHint: 'Tap to switch back to Japanese',
+    closeProfile: 'Close profile',
+    close: 'Close',
+    message: 'Message',
+    meet: 'Meet',
+    about: 'ABOUT',
+    model: 'MODEL',
+    birthday: 'BIRTHDAY',
+    origin: 'ORIGIN',
+    role: 'ROLE',
+    education: 'EDUCATION',
+    personality: 'PERSONALITY',
+    innerWorld: 'INNER WORLD',
+    family: 'FAMILY',
+    friends: 'FRIENDS',
+    hobbies: 'HOBBIES',
+    relationship: 'RELATIONSHIPS',
+    conversation: 'CONVERSATION STYLE',
+    growth: 'GROWTH',
+  };
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.profileModalRoot}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close profile"
+          accessibilityLabel={labels.closeProfile}
           onPress={onClose}
           style={StyleSheet.absoluteFillObject}
         />
         <GlassPanel style={styles.profileModalCard} intensity={58} borderColor="rgba(185,199,255,0.62)">
-          <View style={styles.profileModalHeader}>
-            <View style={styles.profileModalAvatarWrap}>
-              <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={82} />
-              <View style={styles.profileModalOnlineDot} />
-            </View>
-            <View style={styles.profileModalIdentity}>
-              <Text style={styles.profileModalEyebrow}>{isConnected ? 'IN YOUR CIRCLE' : 'NEW PERSON'}</Text>
-              <Text style={styles.profileModalName}>{character.name}</Text>
-              <Text style={styles.profileModalMeta}>{character.location} · {character.age}</Text>
-              <View style={[styles.profileModalStatus, isConnected && styles.profileModalStatusConnected]}>
-                <View style={styles.profileModalStatusDot} />
-                <Text style={styles.profileModalStatusText}>{isConnected ? 'Connected' : 'Not connected yet'}</Text>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={styles.profileModalScroll}
+            contentContainerStyle={styles.profileModalScrollContent}
+          >
+            {characterStreetVisuals[character.id] ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={character.name + ' profile image. ' + labels.languageHint}
+                accessibilityHint={labels.languageHint}
+                onPress={toggleProfileLanguage}
+                style={({ pressed }) => [styles.profileModalHero, pressed && styles.profileModalHeroPressed]}
+              >
+                <Image
+                  source={characterStreetVisuals[character.id]}
+                  resizeMode="cover"
+                  style={styles.profileModalHeroBackdrop}
+                />
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['rgba(14,20,40,0.22)', 'rgba(14,20,40,0.06)', 'rgba(14,20,40,0.2)']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <Image
+                  accessibilityLabel={character.name + ' street profile'}
+                  source={characterStreetVisuals[character.id]}
+                  resizeMode="contain"
+                  style={styles.profileModalHeroImage}
+                />
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['rgba(14,20,40,0)', 'rgba(14,20,40,0.04)', 'rgba(14,20,40,0.64)']}
+                  locations={[0, 0.72, 1]}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View pointerEvents="none" style={styles.profileModalHeroBadge}>
+                  <AppIcon name="sparkles-outline" size={12} color="#D8D2FF" />
+                  <Text style={styles.profileModalHeroBadgeText}>{labels.streetProfile}</Text>
+                </View>
+              </Pressable>
+            ) : null}
+            <View style={styles.profileModalBody}>
+              <View style={styles.profileModalHeader}>
+                <View style={styles.profileModalAvatarWrap}>
+                  <Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={82} />
+                  <View style={styles.profileModalOnlineDot} />
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={character.name + ' profile summary. ' + labels.languageHint}
+                  accessibilityHint={labels.languageHint}
+                  onPress={toggleProfileLanguage}
+                  style={({ pressed }) => [styles.profileModalIdentity, pressed && styles.profileModalIdentityPressed]}
+                >
+                  <Text style={styles.profileModalEyebrow}>{isConnected ? labels.inCircle : labels.newPerson}</Text>
+                  <Text style={styles.profileModalName}>{character.name}</Text>
+                  <Text style={styles.profileModalMeta}>{character.location} · {character.age}</Text>
+                  <View style={[styles.profileModalStatus, isConnected && styles.profileModalStatusConnected]}>
+                    <View style={styles.profileModalStatusDot} />
+                    <Text style={styles.profileModalStatusText}>{isConnected ? labels.connected : labels.notConnected}</Text>
+                  </View>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={labels.closeProfile}
+                  onPress={onClose}
+                  style={({ pressed }) => [styles.profileModalClose, pressed && styles.pressed]}
+                >
+                  <AppIcon name="close" size={20} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={labels.about + '. ' + labels.languageHint}
+                accessibilityHint={labels.languageHint}
+                onPress={toggleProfileLanguage}
+                style={({ pressed }) => [styles.profileModalAbout, pressed && styles.profileModalAboutPressed]}
+              >
+                <Text style={styles.profileModalSectionLabel}>{labels.about}</Text>
+                <Text style={styles.profileModalBio}>{localized(profile.about)}</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={labels.language}
+                accessibilityHint={labels.languageHint}
+                onPress={toggleProfileLanguage}
+                style={({ pressed }) => [styles.profileModalLanguageToggle, pressed && styles.pressed]}
+              >
+                <AppIcon name="language-outline" size={15} color="#C8C2FF" />
+                <Text style={styles.profileModalLanguageText}>{labels.language}</Text>
+                <Text style={styles.profileModalLanguageHint}>{labels.languageHint}</Text>
+              </Pressable>
+
+              <View style={styles.profileModalDetails}>
+                <ProfileInfoSection label={labels.model} value={localized(profile.model)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.birthday} value={localized(profile.birthday)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.origin} value={localized(profile.origin)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.role} value={localized(profile.role)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.education} value={localized(profile.education)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.personality} value={localized(profile.personality)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.innerWorld} value={localized(profile.innerWorld)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.family} value={localized(profile.family)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.friends} value={localized(profile.friends)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.hobbies} value={localized(profile.hobbies)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.relationship} value={localized(profile.relationship)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.conversation} value={localized(profile.conversation)} onPress={toggleProfileLanguage} />
+                <ProfileInfoSection label={labels.growth} value={localized(profile.growth)} onPress={toggleProfileLanguage} />
+              </View>
+
+              <View style={styles.profileModalActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={labels.closeProfile}
+                  onPress={onClose}
+                  style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonSecondary, pressed && styles.pressed]}
+                >
+                  <Text style={styles.profileModalButtonSecondaryText}>{labels.close}</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={(isConnected ? labels.message : labels.meet) + ' ' + character.name}
+                  onPress={isConnected ? onOpenChat : onMeet}
+                  style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonPrimary, pressed && styles.pressed]}
+                >
+                  <AppIcon name={isConnected ? 'chatbubble-ellipses-outline' : 'sparkles-outline'} size={16} color={colors.white} />
+                  <Text style={styles.profileModalButtonPrimaryText}>{isConnected ? labels.message : labels.meet}</Text>
+                </Pressable>
               </View>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close profile"
-              onPress={onClose}
-              style={({ pressed }) => [styles.profileModalClose, pressed && styles.pressed]}
-            >
-              <AppIcon name="close" size={20} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <Text style={styles.profileModalSectionLabel}>ABOUT</Text>
-          <Text style={styles.profileModalBio}>{character.bio}</Text>
-
-          <View style={styles.profileModalDetails}>
-            <View style={styles.profileModalDetail}>
-              <Text style={styles.profileModalDetailLabel}>CONVERSATION STYLE</Text>
-              <Text style={styles.profileModalDetailValue}>{character.tone}</Text>
-            </View>
-          </View>
-
-          <View style={styles.profileModalActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close profile"
-              onPress={onClose}
-              style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonSecondary, pressed && styles.pressed]}
-            >
-              <Text style={styles.profileModalButtonSecondaryText}>Close</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isConnected ? 'Message ' + character.name : 'Meet ' + character.name}
-              onPress={isConnected ? onOpenChat : onMeet}
-              style={({ pressed }) => [styles.profileModalButton, styles.profileModalButtonPrimary, pressed && styles.pressed]}
-            >
-              <AppIcon name={isConnected ? 'chatbubble-ellipses-outline' : 'sparkles-outline'} size={16} color={colors.white} />
-              <Text style={styles.profileModalButtonPrimaryText}>{isConnected ? 'Message' : 'Meet'}</Text>
-            </Pressable>
-          </View>
+          </ScrollView>
         </GlassPanel>
       </View>
     </Modal>
@@ -387,7 +560,7 @@ function PeopleScreen({
                 onPress={() => setProfileCharacter(character)}
                 style={({ pressed }) => [styles.personCardMain, pressed && styles.pressed]}
               >
-              <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={50} />
+              <Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={50} />
               <View style={styles.personCopy}>
                 <View style={styles.personNameRow}>
                   <Text style={styles.personName}>{character.name}</Text>
@@ -542,6 +715,24 @@ const FLOATING_PET_MOTIONS: FloatingPetMotion[] = [
   { left: '80%', top: 308, size: 56, delay: 1500, duration: 5300, x: [0, -14, 17], y: [0, -16, 11], rotate: ['4deg', '-6deg', '5deg'], opacity: 0.8 },
   { left: '26%', top: 438, size: 50, delay: 1800, duration: 4600, x: [0, -15, 11], y: [0, 16, -7], rotate: ['-5deg', '6deg', '-3deg'], opacity: 0.72 },
   { left: '63%', top: 452, size: 52, delay: 500, duration: 5800, x: [0, 17, -12], y: [0, -13, 14], rotate: ['5deg', '-4deg', '6deg'], opacity: 0.74 },
+  { left: '1%', top: 66, size: 40, delay: 2100, duration: 4200, x: [0, 12, -8], y: [0, 13, -8], rotate: ['-4deg', '5deg', '-2deg'], opacity: 0.76 },
+  { left: '84%', top: 72, size: 40, delay: 230, duration: 4500, x: [0, -12, 9], y: [0, -11, 9], rotate: ['4deg', '-5deg', '2deg'], opacity: 0.76 },
+  { left: '0%', top: 184, size: 40, delay: 520, duration: 4700, x: [0, 11, -10], y: [0, 10, -12], rotate: ['-3deg', '6deg', '-4deg'], opacity: 0.74 },
+  { left: '83%', top: 196, size: 40, delay: 780, duration: 4900, x: [0, -10, 12], y: [0, 12, -9], rotate: ['5deg', '-4deg', '3deg'], opacity: 0.74 },
+  { left: '2%', top: 248, size: 40, delay: 1040, duration: 4300, x: [0, 13, -7], y: [0, -11, 12], rotate: ['-5deg', '4deg', '-2deg'], opacity: 0.72 },
+  { left: '82%', top: 252, size: 40, delay: 1280, duration: 4600, x: [0, -13, 8], y: [0, -10, 13], rotate: ['4deg', '-6deg', '3deg'], opacity: 0.72 },
+  { left: '1%', top: 374, size: 40, delay: 1560, duration: 4800, x: [0, 12, -9], y: [0, 12, -10], rotate: ['-4deg', '5deg', '-3deg'], opacity: 0.7 },
+  { left: '84%', top: 388, size: 40, delay: 1780, duration: 5000, x: [0, -11, 10], y: [0, 11, -12], rotate: ['5deg', '-5deg', '2deg'], opacity: 0.7 },
+  { left: '2%', top: 488, size: 38, delay: 1960, duration: 4400, x: [0, 10, -7], y: [0, -9, 8], rotate: ['-3deg', '4deg', '-2deg'], opacity: 0.68 },
+  { left: '84%', top: 488, size: 38, delay: 2180, duration: 4700, x: [0, -10, 8], y: [0, -8, 9], rotate: ['4deg', '-4deg', '2deg'], opacity: 0.68 },
+  { left: '18%', top: 4, size: 34, delay: 2400, duration: 4200, x: [0, 10, -6], y: [0, 8, -6], rotate: ['-3deg', '4deg', '-2deg'], opacity: 0.66 },
+  { left: '38%', top: 8, size: 34, delay: 2580, duration: 4500, x: [0, -9, 7], y: [0, 9, -7], rotate: ['3deg', '-4deg', '2deg'], opacity: 0.66 },
+  { left: '58%', top: 4, size: 34, delay: 2760, duration: 4700, x: [0, 8, -7], y: [0, 7, -8], rotate: ['-2deg', '4deg', '-3deg'], opacity: 0.66 },
+  { left: '78%', top: 8, size: 34, delay: 2940, duration: 4900, x: [0, -8, 6], y: [0, 8, -7], rotate: ['4deg', '-3deg', '2deg'], opacity: 0.66 },
+  { left: '18%', top: 488, size: 34, delay: 3120, duration: 4300, x: [0, 9, -6], y: [0, -8, 7], rotate: ['-3deg', '4deg', '-2deg'], opacity: 0.64 },
+  { left: '38%', top: 492, size: 34, delay: 3300, duration: 4600, x: [0, -8, 6], y: [0, -7, 8], rotate: ['3deg', '-4deg', '2deg'], opacity: 0.64 },
+  { left: '58%', top: 488, size: 34, delay: 3480, duration: 4800, x: [0, 7, -6], y: [0, -8, 7], rotate: ['-2deg', '3deg', '-2deg'], opacity: 0.64 },
+  { left: '78%', top: 492, size: 34, delay: 3660, duration: 5000, x: [0, -7, 6], y: [0, -7, 8], rotate: ['3deg', '-3deg', '2deg'], opacity: 0.64 },
 ];
 
 const FLOATING_PET_GLASS_STYLE = Platform.OS === 'web'
@@ -737,6 +928,9 @@ function FloatingPet({
 
 function PetsScreen({ pet, onSwitch, onSelectPet }: { pet: PetCharacter; onSwitch: () => void; onSelectPet: (id: PetId) => void }) {
   const [incomingPetId, setIncomingPetId] = useState<PetId | null>(null);
+  // Keep one bubble slot for every other pet, including the newly added roster.
+  // The smaller outer slots keep the central companion readable while making
+  // every pet reachable directly from the bubble field.
   const companions = PET_CHARACTERS.filter((candidate) => candidate.id !== pet.id);
 
   const handleCompanionPop = useCallback((id: PetId) => {
@@ -814,43 +1008,42 @@ function getTranslationText(message: Message, step: number) {
   return english.map((line, index) => englishIndexes.includes(index) ? line : japanese[index] ?? line).join('\n');
 }
 
-function normalizeReplyText(value: string) {
-  return value
-    .normalize('NFKC')
-    .replace(/[’‘]/g, "'")
-    .replace(/[^a-z0-9\s']/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+function PhotoMessageCard({
+  photo,
+  isMine,
+  translationStep,
+  onPress,
+}: {
+  photo: NonNullable<Message['photo']>;
+  isMine: boolean;
+  translationStep: number;
+  onPress?: () => void;
+}) {
+  const showJapanese = translationStep % 2 === 1;
+  return (
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel="Photo message">
+      <LinearGradient colors={[photo.accent, '#10152B']} style={[styles.photoMessageCard, isMine && styles.photoMessageCardMine]}>
+        <View style={styles.photoMessageHeader}>
+          <Text style={styles.photoMessageBadge}>{showJapanese ? '写真' : 'PHOTO'}</Text>
+          <Text style={styles.photoMessageScene}>{showJapanese ? photo.sceneJapanese : photo.sceneEnglish}</Text>
+        </View>
+        <View style={styles.photoMessageSceneArea}>
+          <View style={styles.photoMessageGlow} />
+          <Text style={styles.photoMessageEmoji}>{photo.emoji}</Text>
+        </View>
+        <Text style={styles.photoMessageDetail}>{showJapanese ? photo.detailJapanese : photo.detailEnglish}</Text>
+        {onPress ? <Text style={styles.photoMessageHint}>{showJapanese ? 'タップで英語に戻す' : 'Tap to see Japanese'}</Text> : null}
+      </LinearGradient>
+    </Pressable>
+  );
 }
 
-function getReplyEditDistance(first: string, second: string) {
-  let previousRow = Array.from({ length: second.length + 1 }, (_, index) => index);
-  for (let row = 1; row <= first.length; row += 1) {
-    const currentRow = [row];
-    for (let column = 1; column <= second.length; column += 1) {
-      currentRow[column] = Math.min(
-        currentRow[column - 1] + 1,
-        previousRow[column] + 1,
-        previousRow[column - 1] + (first[row - 1] === second[column - 1] ? 0 : 1),
-      );
-    }
-    previousRow = currentRow;
-  }
-  return previousRow[second.length];
-}
-
-function isAcceptableReply(draft: string, expected: string) {
-  const typed = normalizeReplyText(draft);
-  const target = normalizeReplyText(expected);
-  if (!typed || !target) return false;
-  const allowedDistance = Math.max(1, Math.min(4, Math.round(target.length * 0.1)));
-  return getReplyEditDistance(typed, target) <= allowedDistance;
-}
 function ChatDetailScreen({
   character,
   sentMessages,
   translationSteps,
+  userGender,
+  onChangeUserGender,
   selectedReply,
   draft,
   setDraft,
@@ -863,6 +1056,8 @@ function ChatDetailScreen({
   character: Character;
   sentMessages: Message[];
   translationSteps: Record<string, number>;
+  userGender: UserGender;
+  onChangeUserGender: (value: UserGender) => void;
   selectedReply: ReplyChoice | null;
   draft: string;
   setDraft: (value: string) => void;
@@ -875,8 +1070,11 @@ function ChatDetailScreen({
   const chatId = `chat-${character.id}` as ChatId;
   const conversationMessages = sentMessages.filter((message) => message.chatId === chatId);
   const completedRounds = conversationMessages.filter((message) => message.sender === 'user').length;
+  const replyHistory: ConversationHistory = conversationMessages
+    .filter((message) => message.sender === 'user')
+    .map((message) => message.replyChoiceId);
   const openingTimestampRef = useRef(Date.now());
-  const openingRound = getConversationRound(character.id, 0);
+  const openingRound = getConversationRound(character.id, 0, userGender, replyHistory);
   const openingMessage: Message = {
     id: `${character.id}-opening`,
     chatId,
@@ -890,10 +1088,12 @@ function ChatDetailScreen({
   };
   const allMessages = [openingMessage, ...conversationMessages];
   const latestMessage = allMessages[allMessages.length - 1];
-  const round = getConversationRound(character.id, completedRounds);
+  const round = getConversationRound(character.id, completedRounds, userGender, replyHistory);
   const canShowReplyPrompt = Boolean(round && latestMessage.sender === 'character');
+  const isQuestionTurn = round?.turnType === 'question';
+  const isShareTurn = round?.turnType === 'share';
   const isWaitingForCharacter = latestMessage.sender === 'user';
-  const conversationComplete = completedRounds >= 50 && latestMessage.sender === 'character';
+  const conversationComplete = !round && latestMessage.sender === 'character';
   const messageScrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
@@ -907,7 +1107,7 @@ function ChatDetailScreen({
         <IconButton label="Back to chats" onPress={onBack} icon={<AppIcon name="arrow-back" size={23} color={colors.textPrimary} />} />
         <View style={styles.chatIdentity}>
           <View>
-            <Avatar name={character.name} initials={character.initials} colors={character.gradient} size={38} />
+            <Avatar name={character.name} initials={character.initials} colors={character.gradient} source={characterStreetVisuals[character.id]} size={38} />
             <View style={styles.chatOnlineDot} />
           </View>
           <View style={styles.chatIdentityCopy}>
@@ -915,19 +1115,57 @@ function ChatDetailScreen({
             <Text style={styles.chatIdentityStatus}>{character.tone}</Text>
           </View>
         </View>
+        <View style={styles.routeToggle}>
+          <Pressable
+            onPress={() => onChangeUserGender('male')}
+            accessibilityRole="button"
+            accessibilityLabel="Use male relationship route"
+            accessibilityState={{ selected: userGender === 'male' }}
+            style={[styles.routeToggleButton, userGender === 'male' && styles.routeToggleButtonActive]}
+          >
+            <Text style={styles.routeToggleText}>M</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onChangeUserGender('female')}
+            accessibilityRole="button"
+            accessibilityLabel="Use female relationship route"
+            accessibilityState={{ selected: userGender === 'female' }}
+            style={[styles.routeToggleButton, userGender === 'female' && styles.routeToggleButtonActive]}
+          >
+            <Text style={styles.routeToggleText}>F</Text>
+          </Pressable>
+        </View>
         <IconButton label="More options" icon={<AppIcon name="ellipsis-horizontal" size={23} color={colors.textPrimary} />} />
       </View>
 
       <ScrollView ref={messageScrollRef} style={styles.messageScroll} contentContainerStyle={styles.messageContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.dateDivider}><View style={styles.dateLine} /><Text style={styles.dateText}>Today</Text><View style={styles.dateLine} /></View>
         {allMessages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            text={getTranslationText(message, translationSteps[message.id] || 0)}
-            time={message.timestamp}
-            isMine={message.sender === 'user'}
-            onPress={message.translation ? () => onTranslate(message.id) : undefined}
-          />
+          <View key={message.id}>
+            {message.sessionLabelEnglish ? (
+              <View style={styles.sessionDivider}>
+                <View style={styles.dateLine} />
+                <Text style={styles.sessionDividerText}>{(translationSteps[message.id] || 0) % 2 === 1 ? message.sessionLabelJapanese : message.sessionLabelEnglish}</Text>
+                <View style={styles.dateLine} />
+              </View>
+            ) : null}
+            {message.photo ? (
+              <PhotoMessageCard
+                photo={message.photo}
+                isMine={message.sender === 'user'}
+                translationStep={translationSteps[message.id] || 0}
+                onPress={message.translation ? () => onTranslate(message.id) : undefined}
+              />
+            ) : null}
+            {message.text ? (
+              <MessageBubble
+                text={getTranslationText(message, translationSteps[message.id] || 0)}
+                time={message.timestamp}
+                isMine={message.sender === 'user'}
+                onPress={message.translation ? () => onTranslate(message.id) : undefined}
+              />
+            ) : null}
+          </View>
         ))}
         {isWaitingForCharacter ? <TypingIndicator /> : null}
       </ScrollView>
@@ -936,13 +1174,13 @@ function ChatDetailScreen({
         {conversationComplete ? (
           <View style={styles.replyDockHeader}>
             <Text style={styles.replyDockTitle}>Conversation complete</Text>
-            <Text style={styles.replyDockHint}>50 rounds</Text>
+            <Text style={styles.replyDockHint}>{RELATIONSHIP_ROUND_COUNT} turns</Text>
           </View>
         ) : null}
         {canShowReplyPrompt && round ? (
           <View style={styles.replyDockHeader}>
-            <Text style={styles.replyDockTitle}>What do you want to say?</Text>
-            <Text style={styles.replyDockHint}>Choose your meaning</Text>
+            <Text style={styles.replyDockTitle}>{isQuestionTurn ? 'Ask them something' : `Reply to ${character.name}`}</Text>
+            <Text style={styles.replyDockHint}>{isShareTurn ? 'Stay with the moment' : round.turnType === 'goodnight' ? 'Let the evening end naturally' : 'Pick a thought or write your own'}</Text>
           </View>
         ) : null}
         {canShowReplyPrompt && round ? (
@@ -960,7 +1198,7 @@ function ChatDetailScreen({
         ) : null}
         {selectedReply ? (
           <GlassPanel style={styles.englishSuggestion}>
-            <Text style={styles.suggestionLabel}>Your English</Text>
+            <Text style={styles.suggestionLabel}>Reply preview</Text>
             <Text style={styles.suggestionText}>{selectedReply.english}</Text>
           </GlassPanel>
         ) : null}
@@ -969,8 +1207,8 @@ function ChatDetailScreen({
             <TextInput
               value={draft}
               onChangeText={setDraft}
-              editable={Boolean(selectedReply) && !conversationComplete}
-              placeholder={conversationComplete ? 'Conversation complete' : selectedReply ? 'Type the phrase above…' : 'Choose a reply first'}
+              editable={!conversationComplete}
+              placeholder={conversationComplete ? 'Conversation complete' : selectedReply ? 'Type it in your own words…' : 'Write whatever feels natural…'}
               placeholderTextColor={colors.textMuted}
               style={styles.composerInput}
               accessibilityLabel="Type your English reply"
@@ -996,6 +1234,7 @@ export default function AppMain() {
   const [navigationPetPickerOpen, setNavigationPetPickerOpen] = useState(false);
   const [selectedPetId, setSelectedPetId] = useState<PetId>(DEFAULT_PET_ID);
   const [activeCharacterId, setActiveCharacterId] = useState<CharacterId | null>(null);
+  const [userGender, setUserGender] = useState<UserGender>('female');
   const [friends, setFriends] = useState<CharacterId[]>(initialFriends);
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('black');
   const [search, setSearch] = useState('');
@@ -1017,13 +1256,29 @@ export default function AppMain() {
   useEffect(() => {
     if (!pendingConversationReplies.length) return undefined;
     const timer = setTimeout(() => {
-      setSentMessages((current) => [...current, ...pendingConversationReplies.map((pending) => ({
-        ...pending.reply,
-        chatId: `chat-${pending.characterId}` as ChatId,
-        sender: 'character' as const,
-        timestamp: Date.now(),
-        isRead: false,
-      }))]);
+      setSentMessages((current) => [
+        ...current,
+        ...pendingConversationReplies.flatMap((pending) => {
+          const { nextPrompt, ...reply } = pending.reply;
+          const chatId = `chat-${pending.characterId}` as ChatId;
+          const timestamp = Date.now();
+          const replyMessage = {
+            ...reply,
+            chatId,
+            sender: 'character' as const,
+            timestamp,
+            isRead: false,
+          };
+          const promptMessage = nextPrompt ? {
+            ...nextPrompt,
+            chatId,
+            sender: 'character' as const,
+            timestamp: timestamp + 1,
+            isRead: false,
+          } : null;
+          return promptMessage ? [replyMessage, promptMessage] : [replyMessage];
+        }),
+      ]);
       setPendingConversationReplies([]);
     }, 1400);
     return () => clearTimeout(timer);
@@ -1031,7 +1286,7 @@ export default function AppMain() {
 
   const activeCharacter = activeCharacterId ? getCharacter(activeCharacterId) : undefined;
   const selectedPet = getPetCharacter(selectedPetId);
-  const canSend = Boolean(selectedReply && isAcceptableReply(draft, selectedReply.english));
+  const canSend = Boolean(activeCharacterId && draft.trim());
   const visibleTab = radialPreviewTab ?? activeTab;
 
   const openChat = (id: CharacterId) => {
@@ -1065,12 +1320,15 @@ export default function AppMain() {
   };
 
   const sendReply = () => {
-    if (!activeCharacterId || !selectedReply || !canSend || !selectedPromptId) return;
+    if (!activeCharacterId || !canSend) return;
     const chatId = `chat-${activeCharacterId}` as ChatId;
     const roundIndex = sentMessages.filter((message) => message.chatId === chatId && message.sender === 'user').length;
-    const round = getConversationRound(activeCharacterId, roundIndex);
-    if (!round || round.id !== selectedPromptId) return;
-    const response = buildConversationReply(activeCharacterId, roundIndex, selectedReply.id);
+    const replyHistory: ConversationHistory = sentMessages
+      .filter((message) => message.chatId === chatId && message.sender === 'user')
+      .map((message) => message.replyChoiceId);
+    const round = getConversationRound(activeCharacterId, roundIndex, userGender, replyHistory);
+    if (!round || (selectedPromptId && round.id !== selectedPromptId)) return;
+    const response = buildConversationReply(activeCharacterId, roundIndex, selectedReply?.id, userGender, replyHistory, draft.trim());
     if (!response) return;
     setSentMessages((current) => [...current, {
       id: `local-${Date.now()}`,
@@ -1080,11 +1338,19 @@ export default function AppMain() {
       timestamp: Date.now(),
       translation: {
         english: [draft.trim()],
-        japanese: [selectedReply.japanese],
+        japanese: [selectedReply?.japanese || draft.trim()],
       },
+      replyChoiceId: response.choiceId,
       isRead: true,
     }]);
     setPendingConversationReplies((current) => [...current.filter((pending) => pending.characterId !== activeCharacterId), { characterId: activeCharacterId, reply: response }]);
+    setSelectedReply(null);
+    setSelectedPromptId(null);
+    setDraft('');
+  };
+
+  const changeUserGender = (value: UserGender) => {
+    setUserGender(value);
     setSelectedReply(null);
     setSelectedPromptId(null);
     setDraft('');
@@ -1132,6 +1398,8 @@ export default function AppMain() {
           character={activeCharacter}
           sentMessages={sentMessages}
           translationSteps={translationSteps}
+          userGender={userGender}
+          onChangeUserGender={changeUserGender}
           selectedReply={selectedReply}
           draft={draft}
           setDraft={setDraft}
@@ -1228,11 +1496,21 @@ const styles = StyleSheet.create({
   emptyPeople: { color: colors.textMuted, textAlign: 'center', paddingVertical: 28 },
   peopleFooter: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 26, paddingHorizontal: 30 },
   profileModalRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.74)' },
-  profileModalCard: { width: '100%', maxWidth: 390, padding: 20, borderRadius: 28, backgroundColor: 'rgba(14,20,40,0.96)' },
+  profileModalCard: { width: '100%', maxWidth: 390, maxHeight: '90%', borderRadius: 28, backgroundColor: 'rgba(14,20,40,0.96)', overflow: 'hidden' },
+  profileModalScroll: { flexGrow: 0, flexShrink: 1 },
+  profileModalScrollContent: { flexGrow: 1 },
+  profileModalHero: { width: '100%', height: 230, position: 'relative', overflow: 'hidden', backgroundColor: '#151B34' },
+  profileModalHeroPressed: { opacity: 0.88 },
+  profileModalHeroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.28 },
+  profileModalHeroImage: { width: '100%', height: '100%', zIndex: 1 },
+  profileModalHeroBadge: { position: 'absolute', top: 14, left: 16, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(10,13,29,0.58)', borderWidth: 1, borderColor: 'rgba(216,210,255,0.32)' },
+  profileModalHeroBadgeText: { color: '#D8D2FF', fontSize: 9, lineHeight: 12, fontWeight: '900', letterSpacing: 1.05 },
+  profileModalBody: { padding: 20 },
   profileModalHeader: { flexDirection: 'row', alignItems: 'center' },
   profileModalAvatarWrap: { position: 'relative' },
   profileModalOnlineDot: { position: 'absolute', width: 14, height: 14, right: 1, bottom: 2, borderRadius: 7, borderWidth: 2, borderColor: '#0E1428', backgroundColor: colors.success },
-  profileModalIdentity: { flex: 1, minWidth: 0, marginLeft: 14 },
+  profileModalIdentity: { flex: 1, minWidth: 0, marginLeft: 14, borderRadius: 16, paddingVertical: 3 },
+  profileModalIdentityPressed: { backgroundColor: 'rgba(132,140,169,0.12)' },
   profileModalEyebrow: { color: '#B9B6FF', fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.25 },
   profileModalName: { color: colors.textPrimary, fontSize: 24, lineHeight: 30, fontWeight: '900', marginTop: 1 },
   profileModalMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
@@ -1241,10 +1519,16 @@ const styles = StyleSheet.create({
   profileModalStatusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 5, backgroundColor: colors.success },
   profileModalStatusText: { color: colors.textSecondary, fontSize: 10, fontWeight: '700' },
   profileModalClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: 8, borderRadius: 22, backgroundColor: 'rgba(132,140,169,0.12)', borderWidth: 1, borderColor: colors.glassBorder },
+  profileModalAbout: { borderRadius: 16 },
+  profileModalAboutPressed: { backgroundColor: 'rgba(132,140,169,0.08)' },
   profileModalSectionLabel: { color: colors.textMuted, fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 1.2, marginTop: 24, marginBottom: 7 },
   profileModalBio: { color: colors.textPrimary, fontSize: 16, lineHeight: 23 },
-  profileModalDetails: { marginTop: 19, padding: 12, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: colors.glassBorder },
-  profileModalDetail: { minWidth: 0 },
+  profileModalLanguageToggle: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingHorizontal: 11, borderRadius: 13, backgroundColor: 'rgba(109,103,225,0.14)', borderWidth: 1, borderColor: 'rgba(129,123,240,0.42)' },
+  profileModalLanguageText: { color: '#D8D2FF', fontSize: 12, fontWeight: '800' },
+  profileModalLanguageHint: { flex: 1, color: colors.textMuted, fontSize: 10, textAlign: 'right' },
+  profileModalDetails: { marginTop: 12, gap: 9 },
+  profileModalInfoCard: { minWidth: 0, padding: 12, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderColor: colors.glassBorder },
+  profileModalInfoCardPressed: { backgroundColor: 'rgba(109,103,225,0.22)', borderColor: 'rgba(129,123,240,0.65)' },
   profileModalDetailLabel: { color: colors.textMuted, fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.05 },
   profileModalDetailValue: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 },
   profileModalActions: { flexDirection: 'row', gap: 9, marginTop: 20 },
@@ -1291,7 +1575,7 @@ const styles = StyleSheet.create({
   floatingPetImage: { width: '100%', height: '100%' },
   petHomeImageStage: { width: 250, height: 250, alignItems: 'center', justifyContent: 'center', zIndex: 5 },
   petHomeImage: { width: 224, height: 224 },
-  petHomeName: { color: colors.textPrimary, fontSize: 22, lineHeight: 29, fontWeight: '900', textAlign: 'center', marginTop: 2 },
+  petHomeName: { width: '100%', alignSelf: 'center', color: colors.textPrimary, fontSize: 22, lineHeight: 29, fontWeight: '900', textAlign: 'center', marginTop: 2 },
   petHomeCatchphrase: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 3 },
   petSwitchButton: { minWidth: 214, minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, paddingHorizontal: 22, borderRadius: 17, backgroundColor: 'rgba(109,103,225,0.42)', borderWidth: 1, borderColor: '#817BF0', shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   petSwitchButtonText: { color: '#F2EEFF', fontSize: 14, lineHeight: 19, fontWeight: '900' },
@@ -1301,12 +1585,28 @@ const styles = StyleSheet.create({
   chatIdentityCopy: { marginLeft: 10 },
   chatIdentityName: { color: colors.textPrimary, fontSize: 16, fontWeight: '700' },
   chatIdentityStatus: { color: colors.success, fontSize: 11, marginTop: 2 },
+  routeToggle: { flexDirection: 'row', alignItems: 'center', gap: 3, marginRight: 8, padding: 3, borderRadius: 12, borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: 'rgba(14,20,40,0.7)' },
+  routeToggleButton: { width: 22, height: 22, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  routeToggleButtonActive: { backgroundColor: 'rgba(129,123,240,0.72)' },
+  routeToggleText: { color: colors.textSecondary, fontSize: 10, fontWeight: '800' },
   chatOnlineDot: { position: 'absolute', width: 9, height: 9, borderRadius: 5, right: -1, bottom: 0, borderWidth: 2, borderColor: colors.background, backgroundColor: colors.success },
   messageScroll: { flex: 1 },
   messageContent: { paddingHorizontal: 20, paddingTop: 17, paddingBottom: 14 },
   dateDivider: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
   dateLine: { flex: 1, height: 1, backgroundColor: colors.glassBorder },
   dateText: { color: colors.textMuted, fontSize: 11 },
+  sessionDivider: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 18, marginBottom: 14 },
+  sessionDividerText: { color: '#BEB9FF', fontSize: 10, fontWeight: '700', letterSpacing: 0.7 },
+  photoMessageCard: { width: '88%', alignSelf: 'flex-start', marginBottom: 7, borderRadius: 18, borderBottomLeftRadius: 5, padding: 12, borderWidth: 1, borderColor: 'rgba(220,225,255,0.34)', overflow: 'hidden', shadowColor: colors.accentBlue, shadowOpacity: 0.28, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 9 },
+  photoMessageCardMine: { alignSelf: 'flex-end', borderBottomLeftRadius: 18, borderBottomRightRadius: 5 },
+  photoMessageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  photoMessageBadge: { color: '#E9E7FF', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  photoMessageScene: { flex: 1, color: '#F5F3FF', fontSize: 12, fontWeight: '700', textAlign: 'right' },
+  photoMessageSceneArea: { height: 116, marginTop: 10, marginBottom: 9, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,10,24,0.48)', overflow: 'hidden' },
+  photoMessageGlow: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.12)' },
+  photoMessageEmoji: { fontSize: 64 },
+  photoMessageDetail: { color: '#F0F0FF', fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  photoMessageHint: { color: 'rgba(239,237,255,0.68)', fontSize: 10, marginTop: 7 },
   typingLine: { alignItems: 'flex-start', marginTop: 5 },
   typingBubble: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 13, borderRadius: 18, borderBottomLeftRadius: 5, borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: colors.glass, shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12, overflow: 'hidden' },
   typingDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#B0B6C6' },

@@ -7,9 +7,17 @@ import { conversationGroup4 } from './conversationGroup4';
 import { conversationGroup5 } from './conversationGroup5';
 import { conversationGroup6 } from './conversationGroup6';
 import { conversationGroup7 } from './conversationGroup7';
+import { getCharacterQuestionTurn } from './characterQuestionTurns';
+import { getCharacterShareTransition, getCharacterShareTurn } from './characterShareTurns';
 import { practicalConversationBeats } from './practicalConversations';
 import { practicalReactionSets } from './practicalReactions';
 import { reciprocalTurns } from './reciprocalTurns';
+import {
+  getCharacterChoiceEcho,
+  getCharacterPromptCloser,
+  getCharacterReaction,
+  getCharacterSelfDisclosure,
+} from './characterConversationVoices';
 
 export type { ConversationChoice, ConversationRound } from './conversationsTypes';
 
@@ -23,132 +31,109 @@ export const conversationScripts: ConversationGroup = {
   ...conversationGroup7,
 };
 
+const promptUseCounts = new Map<string, number>();
+for (const rounds of Object.values(conversationScripts)) {
+  for (const round of rounds ?? []) {
+    promptUseCounts.set(round.promptEnglish, (promptUseCounts.get(round.promptEnglish) ?? 0) + 1);
+  }
+}
+const sharedPromptEnglish = new Set(
+  [...promptUseCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([prompt]) => prompt),
+);
+
 export function getConversationRound(characterId: CharacterId, roundIndex: number): ConversationRound | undefined {
-  return conversationScripts[characterId]?.[roundIndex];
+  const round = conversationScripts[characterId]?.[roundIndex];
+  if (!round) return undefined;
+
+  const questionTurn = getCharacterQuestionTurn(characterId, roundIndex);
+  if (questionTurn) {
+    return {
+      ...round,
+      turnType: 'question',
+      promptEnglish: questionTurn.promptEnglish,
+      promptJapanese: questionTurn.promptJapanese,
+      choices: questionTurn.choices,
+    };
+  }
+
+  const shareTurn = getCharacterShareTurn(characterId, roundIndex);
+  if (shareTurn) {
+    return {
+      ...round,
+      turnType: 'share',
+      promptEnglish: shareTurn.promptEnglish,
+      promptJapanese: shareTurn.promptJapanese,
+      choices: shareTurn.choices,
+    };
+  }
+
+  const needsCharacterAside = roundIndex % 4 === 0 || (!round.isCustom && sharedPromptEnglish.has(round.promptEnglish));
+  if (round.isCustom || !needsCharacterAside) return round;
+  const closer = getCharacterPromptCloser(characterId, roundIndex);
+  return {
+    ...round,
+    promptEnglish: `${round.promptEnglish.trim()} ${closer[0]}`,
+    promptJapanese: `${round.promptJapanese.trim()} ${closer[1]}`,
+  };
 }
 
 export function getConversationChoice(characterId: CharacterId, roundIndex: number, choiceId: string): ConversationChoice | undefined {
   return getConversationRound(characterId, roundIndex)?.choices.find((choice) => choice.id === choiceId);
 }
 
-type DialogueLine = { en: string; ja: string };
-
-const naturalReactions: Partial<Record<CharacterId, readonly DialogueLine[]>> = {
-  jack: [
-    { en: 'Yeah, I get that.', ja: 'うん、分かるよ。' },
-    { en: 'Same here.', ja: '僕も同じ。' },
-    { en: 'Good call.', ja: 'それがよさそう。' },
-    { en: 'Okay, I’m with you.', ja: 'うん、そうしよう。' },
-    { en: 'That works.', ja: 'それでいこう。' },
-  ],
-  emma: [
-    { en: 'I get that.', ja: '分かるよ。' },
-    { en: 'That makes sense.', ja: 'それなら納得。' },
-    { en: 'Good point.', ja: '確かに。' },
-    { en: 'I can see why.', ja: 'そうする理由、分かるよ。' },
-    { en: 'Okay, got it.', ja: 'うん、分かった。' },
-  ],
-  oliver: [
-    { en: 'Fair enough.', ja: 'なるほどね。' },
-    { en: 'That makes sense.', ja: 'それなら納得だね。' },
-    { en: 'That seems reasonable.', ja: 'それは筋が通ってる。' },
-    { en: 'I can see why.', ja: 'そうする理由は分かるよ。' },
-    { en: 'That works.', ja: 'それで問題なさそう。' },
-  ],
-  noah: [
-    { en: 'Yeah, I get you.', ja: 'うん、分かる。' },
-    { en: 'Honestly, same.', ja: 'マジで、僕も同じ。' },
-    { en: 'Okay, bet.', ja: 'オッケー、そうしよう。' },
-    { en: 'That works.', ja: 'それでいける。' },
-    { en: 'Got you.', ja: '了解。' },
-  ],
-  alex: [
-    { en: 'Yeah, that makes sense.', ja: 'うん、それは分かる。' },
-    { en: 'I get that.', ja: '分かるよ。' },
-    { en: 'Good call.', ja: 'それがよさそう。' },
-    { en: 'That works for me.', ja: '僕はそれで大丈夫。' },
-    { en: 'I’m with you.', ja: '同感だよ。' },
-  ],
-  liam: [
-    { en: 'Ah, I get you.', ja: 'ああ、分かるよ。' },
-    { en: 'Fair enough.', ja: 'なるほどね。' },
-    { en: 'Good call.', ja: 'それがいいね。' },
-    { en: 'Yeah, same here.', ja: 'うん、僕も同じ。' },
-    { en: 'That works.', ja: 'それでいこう。' },
-  ],
-  luca: [
-    { en: 'Oh, I’m into that.', ja: 'あ、それいいね。' },
-    { en: 'I can see that.', ja: '分かる気がする。' },
-    { en: 'Good idea.', ja: 'いい考えだね。' },
-    { en: 'Yeah, let’s do that.', ja: 'うん、そうしよう。' },
-    { en: 'I’m in.', ja: '僕もやる。' },
-  ],
-  miles: [
-    { en: 'Fair point.', ja: '確かにそうだね。' },
-    { en: 'I can see the logic.', ja: '筋は分かるよ。' },
-    { en: 'That works.', ja: 'それでいいと思う。' },
-    { en: 'Sounds reasonable.', ja: '妥当だと思う。' },
-    { en: 'I can see why.', ja: 'そうする理由は分かるよ。' },
-  ],
-  finn: [
-    { en: 'I hear you.', ja: '分かるよ。' },
-    { en: 'Makes sense.', ja: 'なるほど。' },
-    { en: 'That works.', ja: 'それでいこう。' },
-    { en: 'I get it.', ja: '分かるよ。' },
-    { en: 'Fair enough.', ja: 'それなら納得。' },
-  ],
-  lena: [
-    { en: 'I get that.', ja: '分かるよ。' },
-    { en: 'Good call.', ja: 'それがよさそう。' },
-    { en: 'That works.', ja: 'それでいけそう。' },
-    { en: 'Yeah, absolutely.', ja: 'うん、もちろん。' },
-    { en: 'Okay, I’m with you.', ja: 'うん、そうしよう。' },
-  ],
-  mara: [
-    { en: 'Understood.', ja: '分かったわ。' },
-    { en: 'That works.', ja: 'それでいきましょう。' },
-    { en: 'Got it.', ja: '了解。' },
-    { en: 'Makes sense.', ja: '筋が通っているわ。' },
-    { en: 'Agreed.', ja: '同意するわ。' },
-  ],
-  camille: [
-    { en: 'I understand.', ja: '分かるよ。' },
-    { en: 'I can see why.', ja: 'そうする理由、分かるよ。' },
-    { en: 'That works.', ja: 'それでいいね。' },
-    { en: 'Good idea.', ja: 'いい考えだね。' },
-    { en: 'Yes, I get it.', ja: 'うん、分かるよ。' },
-  ],
-};
-
-const naturalBridges: readonly DialogueLine[] = [
-  { en: '', ja: '' },
-  { en: 'So, ', ja: 'それで、' },
-  { en: 'By the way, ', ja: 'そういえば、' },
-  { en: 'Okay—', ja: 'じゃあ、' },
-  { en: 'Oh, and ', ja: 'あと、' },
-];
-
-function pickDialogueLine(lines: readonly DialogueLine[], index: number) {
-  return lines[index % lines.length];
-}
-
 export function buildConversationReply(characterId: CharacterId, roundIndex: number, choiceId: string) {
-  const choice = getConversationChoice(characterId, roundIndex, choiceId);
+  const round = getConversationRound(characterId, roundIndex);
+  if (!round) return null;
+  const choice = round?.choices.find((item) => item.id === choiceId);
   if (!choice) return null;
 
   const nextRound = getConversationRound(characterId, roundIndex + 1);
+  const choiceIndex = round.choices.findIndex((item) => item.id === choiceId);
+  const response = round.turnType === 'question'
+    ? (() => {
+      const detail = getCharacterSelfDisclosure(characterId, roundIndex + 1, choiceIndex);
+      return {
+        en: `${choice.responseEnglish} ${detail[0]}`,
+        ja: `${choice.responseJapanese}${detail[1]}`,
+      };
+    })()
+    : round.turnType === 'share'
+    ? { en: choice.responseEnglish, ja: choice.responseJapanese }
+    : round.isCustom
+    ? {
+      en: choice.responseEnglish + ' ' + getCharacterChoiceEcho(characterId, choice.english, 'en', roundIndex, choiceIndex),
+      ja: choice.responseJapanese + getCharacterChoiceEcho(characterId, choice.japanese, 'ja', roundIndex, choiceIndex),
+    }
+    : (() => {
+      const [english, japanese] = getCharacterReaction(characterId, roundIndex, choiceIndex, choice);
+      return { en: english, ja: japanese };
+    })();
+  const disclosure = round.turnType !== 'question' && round.turnType !== 'share'
+    ? nextRound?.turnType === 'share'
+      ? getCharacterShareTransition(characterId)
+      : getCharacterSelfDisclosure(characterId, roundIndex, choiceIndex)
+    : null;
+  const responseEnglish = [response.en, disclosure?.[0]].filter((line): line is string => Boolean(line));
+  const responseJapanese = [response.ja, disclosure?.[1]].filter((line): line is string => Boolean(line));
   const nextPrompt = nextRound ? {
-    en: nextRound.promptEnglish,
-    ja: nextRound.promptJapanese,
+    id: characterId + '-prompt-' + String(roundIndex + 2),
+    text: nextRound.promptEnglish,
+    translation: {
+      english: [nextRound.promptEnglish],
+      japanese: [nextRound.promptJapanese],
+    },
   } : null;
 
   return {
     id: characterId + '-reply-' + String(roundIndex + 1) + '-' + choiceId,
-    text: nextPrompt ? choice.responseEnglish + ' ' + nextPrompt.en : choice.responseEnglish,
+    text: responseEnglish.join(' '),
     translation: {
-      english: nextPrompt ? [choice.responseEnglish, nextPrompt.en] : [choice.responseEnglish],
-      japanese: nextPrompt ? [choice.responseJapanese, nextPrompt.ja] : [choice.responseJapanese],
+      english: responseEnglish,
+      japanese: responseJapanese,
     },
+    nextPrompt,
   };
 }
 

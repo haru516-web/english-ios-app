@@ -1,5 +1,6 @@
 import React, { ReactNode, useMemo } from 'react';
 import {
+  Image,
   GestureResponderEvent,
   Platform,
   Pressable,
@@ -11,8 +12,10 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 import { colors } from './design';
 
@@ -27,11 +30,11 @@ export type GlassPanelProps = {
   testID?: string;
 };
 
-export function GlassSurfaceLight({ compact = false }: { compact?: boolean }) {
+export function GlassSurfaceLight({ compact = false, showSpecular = true }: { compact?: boolean; showSpecular?: boolean }) {
   return <>
     <LinearGradient pointerEvents="none" colors={['rgba(204,197,255,0.18)', 'rgba(129,123,240,0.06)', 'rgba(14,20,40,0)']} start={{ x: 0, y: 0 }} end={{ x: 0.82, y: 0.88 }} style={StyleSheet.absoluteFill} />
     <LinearGradient pointerEvents="none" colors={['rgba(226,216,255,0.16)', 'rgba(118,107,255,0.05)', 'rgba(118,107,255,0)']} start={{ x: 0, y: 0.4 }} end={{ x: 1, y: 0.6 }} style={[styles.glassSweep, compact && styles.glassSweepCompact]} />
-    <View pointerEvents="none" style={[styles.glassSpecular, compact && styles.glassSpecularCompact]} />
+    {showSpecular ? <View pointerEvents="none" style={[styles.glassSpecular, compact && styles.glassSpecularCompact]} /> : null}
   </>;
 }
 export function GlassPanel({
@@ -58,6 +61,7 @@ export type AvatarProps = {
   initials?: string;
   size?: number;
   colors?: readonly [ColorValue, ColorValue, ...ColorValue[]];
+  source?: ImageSourcePropType;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
@@ -67,10 +71,14 @@ export function Avatar({
   initials,
   size = 44,
   colors = ['#293552', '#7771E8'],
+  source,
   style,
   accessibilityLabel,
 }: AvatarProps) {
   const label = initials || name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || '?';
+  const avatarInnerSize = Math.max(1, size - 2);
+  const portraitWidth = avatarInnerSize * 2.35;
+  const portraitHeight = portraitWidth * 1.5;
   return (
     <LinearGradient
       colors={colors}
@@ -81,7 +89,22 @@ export function Avatar({
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel || `${name || 'Person'} avatar`}
     >
-      <Text style={[styles.avatarText, { fontSize: Math.max(11, size * 0.32) }]}>{label}</Text>
+      {source ? (
+        <Image
+          source={source}
+          resizeMode="contain"
+          accessible={false}
+          style={{
+            position: 'absolute',
+            width: portraitWidth,
+            height: portraitHeight,
+            left: (avatarInnerSize - portraitWidth) / 2,
+            top: 0,
+          } as any}
+        />
+      ) : (
+        <Text style={[styles.avatarText, { fontSize: Math.max(11, size * 0.32) }]}>{label}</Text>
+      )}
     </LinearGradient>
   );
 }
@@ -124,7 +147,7 @@ export type SearchFieldProps = TextInputProps & { containerStyle?: StyleProp<Vie
 export function SearchField({ containerStyle, placeholder = 'Search', accessibilityLabel = 'Search', style, ...props }: SearchFieldProps) {
   return (
     <View style={[styles.searchField, containerStyle]}>
-      <Text style={styles.searchIcon} accessibilityElementsHidden>⌕</Text>
+      <Ionicons name="search-outline" size={17} color="#B9C0CC" style={styles.searchIcon} accessible={false} />
       <TextInput
         {...props}
         placeholder={placeholder}
@@ -241,14 +264,14 @@ const styles = StyleSheet.create({
   glassSpecular: { position: 'absolute', top: 4, left: 22, width: 66, height: 2, borderRadius: 2, backgroundColor: 'rgba(226,216,255,0.54)', shadowColor: '#8174FF', shadowOpacity: 0.46, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } },
   glassSpecularCompact: { left: 18, width: 48 },
   glassPanel: { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: 22, overflow: 'hidden', shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
-  avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder },
+  avatar: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder, overflow: 'hidden' },
   avatarText: { color: '#F0EEFF', fontWeight: '700' },
   iconButton: { alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12, overflow: 'hidden' },
   iconButtonGlass: { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   iconButtonAccent: { backgroundColor: 'rgba(109,103,225,0.42)', borderWidth: 1, borderColor: '#817BF0', shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   iconFallback: { color: '#EEE9FF', fontSize: 22 },
   searchField: { height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, borderRadius: 14, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: colors.accentBlue, shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12, overflow: 'hidden' },
-  searchIcon: { color: '#B9C0CC', fontSize: 25, lineHeight: 25, marginRight: 7 },
+  searchIcon: { width: 18, height: 18, marginRight: 7 },
   searchInput: { flex: 1, color: '#EEF0FF', fontSize: 16, paddingVertical: 0 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle: { color: '#EEF0FF', fontSize: 16, fontWeight: '700' },

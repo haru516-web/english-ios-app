@@ -191,7 +191,7 @@ function PetPickerOverlay({
     <View style={styles.modalRoot}>
         <Pressable accessibilityLabel="ペット選択を閉じる" accessibilityRole="button" onPress={onClose} style={styles.modalBackdrop} />
         <View accessibilityViewIsModal accessibilityLabel="ペットを選ぶ" style={styles.pickerCard}>
-          <GlassSurfaceLight />
+          <GlassSurfaceLight showSpecular={false} />
           <View style={styles.pickerHeader}>
             <View style={styles.pickerHeaderCopy}>
               <View pointerEvents="none" style={styles.pickerEyebrowSpacer} />
@@ -649,7 +649,7 @@ export function PetWidget({
     >
       {askOpen && !hideFloatingPet && layout.width > 0 ? (
         <View onLayout={handleAskCardLayout} style={[styles.askCard, { width: cardWidth, left: cardLeft, top: cardTop }]}>
-          <GlassSurfaceLight compact />
+          <GlassSurfaceLight compact showSpecular={false} />
           <View style={styles.askHeader}>
             <View style={styles.askHeaderCopy}>
               <Text style={styles.askTitle}>単語や熟語を聞いてみる</Text>
@@ -808,15 +808,15 @@ const styles = StyleSheet.create({
   closeButtonText: { color: '#C8C2FF', fontSize: 30, lineHeight: 32, fontWeight: '300' },
   pickerScroll: { flex: 1, minHeight: 0 },
   pickerGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 13, paddingHorizontal: 18, paddingTop: 17, paddingBottom: 18 },
-  pickerOption: { width: '31.5%', alignItems: 'center', paddingVertical: 3 },
+  pickerOption: { width: '31.5%', minHeight: 146, alignItems: 'center', paddingVertical: 3 },
   pickerOptionPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
   pickerImageWrap: { width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   pickerImage: { width: '91%', height: '91%' },
   pickerCheck: { position: 'absolute', top: 0, right: 0, width: 23, height: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   pickerCheckText: { color: '#241A25', fontSize: 14, lineHeight: 16, fontWeight: '900' },
-  pickerName: { maxWidth: '100%', color: '#8E95A6', fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+  pickerName: { width: '100%', minHeight: 17, color: '#8E95A6', fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center', marginTop: 4 },
   pickerNameSelected: { color: '#D8D2FF' },
-  pickerCatchphrase: { maxWidth: '100%', color: '#626A7B', fontSize: 9, lineHeight: 13, textAlign: 'center' },
+  pickerCatchphrase: { width: '100%', minHeight: 13, color: '#626A7B', fontSize: 9, lineHeight: 13, textAlign: 'center' },
   pickerFooter: { flexDirection: 'row', gap: 10, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: 'rgba(185,199,255,0.18)' },
   pickerCancel: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(185,199,255,0.38)', backgroundColor: 'rgba(14,20,40,0.76)', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
   pickerConfirm: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 15, backgroundColor: 'rgba(109,103,225,0.42)', borderWidth: 1, borderColor: '#817BF0', shadowColor: '#766BFF', shadowOpacity: 0.34, shadowRadius: 16, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
