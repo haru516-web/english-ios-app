@@ -26,8 +26,7 @@ export type PetId =
   | 'reamobby'
   | 'shikamobby'
   | 'uyumobby'
-  | 'wolfmobby'
-  | 'youchiennmobby';
+  | 'wolfmobby';
 
 export type PetCharacter = {
   id: PetId;
@@ -249,14 +248,6 @@ export const PET_CHARACTERS: readonly PetCharacter[] = [
     accent: '#AEBBCB',
     image: require('../assets/mobies/wolfmobby.png'),
     meaningTemplates: ['{meaning}って意味だ。短くても、使う場面を選べば強く伝わる。', '{meaning}ということだな。言葉は数より、タイミングが大事だ。'],
-  },
-  {
-    id: 'youchiennmobby',
-    name: 'ようちえんモビー',
-    catchphrase: 'みんなと遊ぶちびっこ',
-    accent: '#F4B5C8',
-    image: require('../assets/mobies/youchiennmobby.png'),
-    meaningTemplates: ['{meaning}って意味だよ！ いっしょに言ってみる？', '{meaning}ってこと。できたら、ぎゅーってしてあげる！'],
   },
 ] as const;
 
